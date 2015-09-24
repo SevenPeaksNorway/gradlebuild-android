@@ -1,0 +1,135 @@
+def final CRASHLYTICS_KEY = 'crashlyticsApiKey'
+def final CRASHLYTICS_SECRET = 'crashlyticsApiSecret'
+
+ext.setStringField = { obj, key, value ->
+    obj.buildConfigField 'String', key, "\"${value}\""
+}
+
+ext.setupVersion = { config, version ->
+    def build = null
+
+    if (System.getenv('BUILD_NUMBER')) { // We are running on Jenkins server
+        build = System.getenv('SVN_REVISION')
+        if (!build) build = 'git rev-list --count HEAD'.execute().text.trim()
+    }
+
+    def (major, minor, patch) = version.tokenize('.')
+    def code = major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()
+    def name = build ? "${version}-b${build}" : version
+
+    config.versionCode code
+    config.versionName name
+
+    println "-------- VERSION --------\n" +
+            "-- CODE = ${code}\n" +
+            "-- NAME = ${name}\n" +
+            "-------------------------"
+}
+
+ext.setOutputFileName = { android, appName ->
+    android.applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            String apkName = "${appName}-${output.baseName}-${variant.versionName}"
+            String dir = output.outputFile.parent
+
+            File zipIn = new File(dir, "${apkName}.unaligned_apk")
+            File zipOut = new File(dir, "${apkName}.apk")
+
+            if (output.zipAlign) {
+                output.zipAlign.inputFile = zipIn
+                output.zipAlign.outputFile = zipOut
+            }
+            if (output.packageApplication) {
+                output.packageApplication.outputFile = zipIn
+            }
+        }
+    }
+}
+
+
+ext.initCrashlyticsKeys = { flavor, key, secret ->
+    flavor.set(CRASHLYTICS_KEY, key)
+    flavor.set(CRASHLYTICS_SECRET, secret)
+    flavor.manifestPlaceholders = [crashlyticsApiKey: key]
+}
+
+ext.initCrashlyticsUploadParams = { build, group ->
+    build.ext.betaDistributionGroupAliases = group
+
+    String commit = System.getenv('GIT_COMMIT')
+    String prevCommit = System.getenv('GIT_PREVIOUS_COMMIT')
+    println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
+
+    String revision = System.getenv('SVN_REVISION')
+    String prevRevision = System.getenv('SVN_PREVIOUS_REVISION')
+    println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
+
+    def command = null;
+
+    if (commit && prevCommit) {
+        command = "git log --pretty=format:\"%s\" ${prevCommit}..${commit} | grep -iv \"/logoff\$\"";
+    } else if (revision && prevRevision) {
+        prevRevision = prevRevision.trim()
+
+        String username = System.getenv('SVN_USERNAME')
+        String password = System.getenv('SVN_PASSWORD')
+
+        if (username && password) {
+            println "Connecting to svn under ${username}"
+            command = "svn log -r ${revision}:${prevRevision} --username ${username} --password ${password}" +
+                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"";
+        } else {
+            println "You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log"
+        }
+    }
+
+    if (command) {
+        def proc = ["bash", "-c", command].execute()
+        proc.waitFor()
+        if (proc.exitValue() != 0) {
+            println "Error: ${proc.err.text}"
+        } else {
+            def log = proc.text
+
+            println "---- CRASHLYTICS LOG ----\n" +
+                    "${log}\n" +
+                    "-------------------------\n"
+
+            build.ext.betaDistributionReleaseNotes = log
+        }
+    }
+}
+
+ext.initCrashlyticsUploadTask = { android ->
+    File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
+
+    android.applicationVariants.all { variant ->
+        def taskAdded = false
+
+        variant.productFlavors.each { Object flavor ->
+            if (taskAdded || !flavor.hasProperty(CRASHLYTICS_KEY)
+                    || !flavor.hasProperty(CRASHLYTICS_SECRET)) return
+
+            def suffix = variant.name.capitalize()
+
+            def genTask = task("fabricGenerateProperties${suffix}") << {
+                Properties properties = new Properties()
+                properties.put("apiKey", flavor[CRASHLYTICS_KEY])
+                properties.put("apiSecret", flavor[CRASHLYTICS_SECRET])
+                properties.store(new FileWriter(propFile), "")
+            }
+
+            project.tasks.getByName("fabricGenerateResources${suffix}").dependsOn genTask
+
+            project.tasks.getByName("crashlyticsUploadDistribution${suffix}").doLast {
+                propFile.delete()
+            }
+
+            taskAdded = true
+        }
+
+        if (!taskAdded)
+            throw new GradleException("No crashlytics key / secret for ${variant.name}")
+    }
+
+}
