@@ -1,14 +1,65 @@
-def final CRASHLYTICS_KEY = 'crashlyticsApiKey'
-def final CRASHLYTICS_SECRET = 'crashlyticsApiSecret'
+/*
+Usage example:
 
+apply from: "${rootDir}/libraries/GradleBuild/commons.gradle"
+
+android {
+    defaultConfig {
+        ...
+        setupVersion it, '1.0.0'
+    }
+    ...
+    productFlavors {
+        dev {
+            setStringField it, 'SERVER_URL', 'http://example.com'
+            setStringRes it, 'flurry_key', 'abcdefghijklmnoprst'
+        }
+    }
+    ...
+    setOutputFileName it, 'appname'
+}
+ */
+
+
+/**
+ * Adds string field to the generated BuildConfig class.
+ *
+ * Can be called within defaultConfig, build type or flavor initialization closure:
+ * "setStringField it, 'NAME', 'VALUE'".
+ */
 ext.setStringField = { obj, key, value ->
     obj.buildConfigField 'String', key, "\"${value}\""
 }
 
+/**
+ * Adds string resource to be accessible as R.string.key.
+ *
+ * Can be called within defaultConfig, build type or flavor initialization closure:
+ * "setStringRes it, 'name', 'value'".
+ */
+ext.setStringRes = { obj, key, value ->
+    obj.resValue 'string', key, value
+}
+
+
+/**
+ * Sets app version name and version code.
+ *
+ * Provided version should be in form 'X.Y.Z', these version will be parsed and version code will be
+ * generated from it as 'X * 10000 + Y * 100 + Z', i.e. '1.2.1' will be converted to '10201'.
+ *
+ * When building on build server version name will be extended to contain build number,
+ * i.e. '1.2.1-b231'. For svn it will be latest svn revision number, for git it will be
+ * a total number of commits from the branch root.
+ *
+ * Should be called instead of 'versionName' / 'versionCode' within defauiltConfig closure:
+ * "setupVersion it, 'X.Y.Z'".
+ */
 ext.setupVersion = { config, version ->
     def build = null
 
-    if (System.getenv('BUILD_NUMBER')) { // We are running on Jenkins server
+    if (System.getenv('BUILD_NUMBER')) {
+        // We are running on Jenkins server
         build = System.getenv('SVN_REVISION')
         if (!build) build = 'git rev-list --count HEAD'.execute().text.trim()
     }
@@ -26,6 +77,11 @@ ext.setupVersion = { config, version ->
             "-------------------------"
 }
 
+/**
+ * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
+ *
+ * Should be called within android setup, closer to the end: "setOutputFileName it, 'appName'".
+ */
 ext.setOutputFileName = { android, appName ->
     android.applicationVariants.all { variant ->
         variant.outputs.each { output ->
@@ -44,92 +100,4 @@ ext.setOutputFileName = { android, appName ->
             }
         }
     }
-}
-
-
-ext.initCrashlyticsKeys = { flavor, key, secret ->
-    flavor.set(CRASHLYTICS_KEY, key)
-    flavor.set(CRASHLYTICS_SECRET, secret)
-    flavor.manifestPlaceholders = [crashlyticsApiKey: key]
-}
-
-ext.initCrashlyticsUploadParams = { build, group ->
-    build.ext.betaDistributionGroupAliases = group
-
-    String commit = System.getenv('GIT_COMMIT')
-    String prevCommit = System.getenv('GIT_PREVIOUS_COMMIT')
-    println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
-
-    String revision = System.getenv('SVN_REVISION')
-    String prevRevision = System.getenv('SVN_PREVIOUS_REVISION')
-    println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
-
-    def command = null;
-
-    if (commit && prevCommit) {
-        command = "git log --pretty=format:\"%s\" ${prevCommit}..${commit} | grep -iv \"/logoff\$\"";
-    } else if (revision && prevRevision) {
-        prevRevision = prevRevision.trim()
-
-        String username = System.getenv('SVN_USERNAME')
-        String password = System.getenv('SVN_PASSWORD')
-
-        if (username && password) {
-            println "Connecting to svn under ${username}"
-            command = "svn log -r ${revision}:${prevRevision} --username ${username} --password ${password}" +
-                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"";
-        } else {
-            println "You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log"
-        }
-    }
-
-    if (command) {
-        def proc = ["bash", "-c", command].execute()
-        proc.waitFor()
-        if (proc.exitValue() != 0) {
-            println "Error: ${proc.err.text}"
-        } else {
-            def log = proc.text
-
-            println "---- CRASHLYTICS LOG ----\n" +
-                    "${log}\n" +
-                    "-------------------------\n"
-
-            build.ext.betaDistributionReleaseNotes = log
-        }
-    }
-}
-
-ext.initCrashlyticsUploadTask = { android ->
-    File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
-
-    android.applicationVariants.all { variant ->
-        def taskAdded = false
-
-        variant.productFlavors.each { Object flavor ->
-            if (taskAdded || !flavor.hasProperty(CRASHLYTICS_KEY)
-                    || !flavor.hasProperty(CRASHLYTICS_SECRET)) return
-
-            def suffix = variant.name.capitalize()
-
-            def genTask = task("fabricGenerateProperties${suffix}") << {
-                Properties properties = new Properties()
-                properties.put("apiKey", flavor[CRASHLYTICS_KEY])
-                properties.put("apiSecret", flavor[CRASHLYTICS_SECRET])
-                properties.store(new FileWriter(propFile), "")
-            }
-
-            project.tasks.getByName("fabricGenerateResources${suffix}").dependsOn genTask
-
-            project.tasks.getByName("crashlyticsUploadDistribution${suffix}").doLast {
-                propFile.delete()
-            }
-
-            taskAdded = true
-        }
-
-        if (!taskAdded)
-            throw new GradleException("No crashlytics key / secret for ${variant.name}")
-    }
-
 }

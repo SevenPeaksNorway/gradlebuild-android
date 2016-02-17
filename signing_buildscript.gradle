@@ -1,0 +1,9 @@
+// Import this file inside buildscript section of your build.gradle like this:
+//
+// buildscript {
+//     apply from: "${rootDir}/.../signing_buildscript.gradle", to: buildscript
+// }
+
+dependencies {
+    classpath 'com.alexvasilkov:android-sign-release:0.8.1'
+}
