@@ -29,7 +29,6 @@ android {
         }
     }
     ...
-    initCrashlyticsUploadTask it
 }
 
 In AndroidManifest.xml:
@@ -154,7 +153,7 @@ ext.initCrashlyticsUploadParams = { build, group ->
  *
  * Should be called within android setup, closer to the end: "initCrashlyticsUploadTask it"
  */
-ext.initCrashlyticsUploadTask = { android ->
+project.afterEvaluate {
     File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
 
     android.applicationVariants.all { variant ->
@@ -175,7 +174,7 @@ ext.initCrashlyticsUploadTask = { android ->
                 properties.store(new FileWriter(propFile), "")
             }
 
-            project.tasks.getByName("fabricGenerateResources${suffix}").dependsOn genTask
+            project.tasks.getByName("crashlyticsUploadDistribution${suffix}").dependsOn genTask
 
             project.tasks.getByName("crashlyticsUploadDistribution${suffix}").doLast {
                 propFile.delete()

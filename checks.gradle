@@ -8,6 +8,7 @@ android {
     lintOptions {
         // http://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.LintOptions.html
         lintConfig file("${rootDir}/libraries/GradleBuild/checks/lint.xml")
+        abortOnError false // Errors report will be generated and shown by Jenkins
         htmlOutput file("${REPORTS_DIR}/lint/lint-results.html")
         xmlOutput file("${REPORTS_DIR}/lint/lint-results.xml")
     }

@@ -82,7 +82,7 @@ ext.setupVersion = { config, version ->
  *
  * Should be called within android setup, closer to the end: "setOutputFileName it, 'appName'".
  */
-ext.setOutputFileName = { android, appName ->
+ext.setOutputFileName = { appName ->
     android.applicationVariants.all { variant ->
         variant.outputs.each { output ->
             String apkName = "${appName}-${output.baseName}-${variant.versionName}"
@@ -99,5 +99,29 @@ ext.setOutputFileName = { android, appName ->
                 output.packageApplication.outputFile = zipIn
             }
         }
+    }
+}
+
+/*
+ * Creates build task 'ci' to use with Jenkins.
+ * It expects MODE build parameter (provided with -DMODE=XXX by Jenkins) to be set to flavor name.
+ * This task will assemble, check and upload debug build to crashlytics for given flavor.
+ */
+project.afterEvaluate {
+    final mode = System.properties.MODE
+    final modeName = mode ? mode.toLowerCase().capitalize() : ''
+
+    final buildTask = project.task 'ci'
+
+    buildTask.dependsOn 'check'
+
+    final assembleTask = project.tasks["assemble${modeName}Debug"]
+    buildTask.dependsOn assembleTask
+
+    final distrTaskName = "crashlyticsUploadDistribution${modeName}Debug"
+    if (project.tasks.asMap.containsKey(distrTaskName)) {
+        final distrTask = project.tasks[distrTaskName]
+        buildTask.dependsOn distrTask
+        distrTask.dependsOn assembleTask
     }
 }
