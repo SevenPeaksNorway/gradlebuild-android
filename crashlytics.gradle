@@ -14,7 +14,7 @@ apply from: "${rootDir}/libraries/GradleBuild/crashlytics.gradle"
 android {
     defaultConfig {
         ...
-        initCrashlyticsUploadParams it, null
+        ext.betaDistributionGroupAliases = 'testers-gorup' // Crashlytics testers group, if needed
     }
     ...
     productFlavors {
@@ -88,72 +88,16 @@ ext.initCrashlyticsKeys = { flavor, key, secret ->
 }
 
 /**
- * Sets up Crashlytics release log and testers group for notifcations.
+ * Sets Crashlytics change log for current build.
  *
- * Release log will contain all commits comments (comments can be exluded from log by adding
- * " /logoff" to the end of the comment). Release log will contain commits since last release,
- * to detect last relese 'GIT_PREVIOUS_COMMIT' or 'SVN_PREVIOUS_REVISION' env variable should be
- * set. For svn commits log 'SVN_USERNAME' and 'SVN_PASSWORD' env variables are also required.
- *
- * Should be called within android -> defaultConfig setup closure:
- * "initCrashlyticsUploadParams it, 'GROUP_ID'"
- */
-ext.initCrashlyticsUploadParams = { build, group ->
-    build.ext.betaDistributionGroupAliases = group
-
-    String commit = System.getenv('GIT_COMMIT')
-    String prevCommit = System.getenv('GIT_PREVIOUS_COMMIT')
-    println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
-
-    String revision = System.getenv('SVN_REVISION')
-    String prevRevision = System.getenv('SVN_PREVIOUS_REVISION')
-    println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
-
-    def command = null;
-
-    if (commit && prevCommit) {
-        command =
-                "git log --pretty=format:\"%s\" ${prevCommit}..${commit} | grep -iv \"/logoff\$\"";
-    } else if (revision && prevRevision) {
-        prevRevision = prevRevision.trim()
-
-        String username = System.getenv('SVN_USERNAME')
-        String password = System.getenv('SVN_PASSWORD')
-
-        if (username && password) {
-            println "Connecting to svn under ${username}"
-            command =
-                    "svn log -r ${revision}:${prevRevision} --username ${username} --password ${password}" +
-                            " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"";
-        } else {
-            println "You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log"
-        }
-    }
-
-    if (command) {
-        def proc = ["bash", "-c", command].execute()
-        proc.waitFor()
-        if (proc.exitValue() != 0) {
-            println "Error: ${proc.err.text}"
-        } else {
-            def log = proc.text
-
-            println "---- CRASHLYTICS LOG ----\n" +
-                    "${log}\n" +
-                    "-------------------------\n"
-
-            build.ext.betaDistributionReleaseNotes = log
-        }
-    }
-}
-
-/**
- * Sets up tasks to generate 'fabric.properties' file before uploading to Crashlytics.
+ * Also sets up tasks to generate 'fabric.properties' file before uploading to Crashlytics.
  * 'fabric.properties' file should be excluded from version control.
  *
  * Should be called within android setup, closer to the end: "initCrashlyticsUploadTask it"
  */
 project.afterEvaluate {
+    setCrashlyticsChangeLog()
+
     File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
 
     android.applicationVariants.all { variant ->
@@ -168,16 +112,17 @@ project.afterEvaluate {
             def suffix = variant.name.capitalize()
 
             def genTask = task("fabricGenerateProperties${suffix}") << {
-                Properties properties = new Properties()
-                properties.put("apiKey", flavor[CRASHLYTICS_INTERNAL_KEY])
-                properties.put("apiSecret", flavor[CRASHLYTICS_INTERNAL_SECRET])
-                properties.store(new FileWriter(propFile), "")
+                Properties props = new Properties()
+                props.put("apiKey", flavor[CRASHLYTICS_INTERNAL_KEY])
+                props.put("apiSecret", flavor[CRASHLYTICS_INTERNAL_SECRET])
+                props.store(new FileWriter(propFile), "")
             }
 
             project.tasks.getByName("crashlyticsUploadDistribution${suffix}").dependsOn genTask
 
             project.tasks.getByName("crashlyticsUploadDistribution${suffix}").doLast {
                 propFile.delete()
+                updateVcsProperties()
             }
 
             taskAdded = true
@@ -187,4 +132,121 @@ project.afterEvaluate {
             throw new GradleException("No crashlytics key / secret for ${variant.name}")
         }
     }
+}
+
+/**
+ * Saves last git commit / vcs revision to be used next time to generate Crashlytics change log.
+ */
+def void updateVcsProperties() {
+    Properties props = getVcsProperties()
+    if (getGitCommit()) {
+        props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
+        saveVcsProperties(props)
+    } else if (getSvnRevision()) {
+        props.put('SVN_PREVIOUS_REVISION', getSvnRevision())
+        saveVcsProperties(props)
+    }
+}
+
+/**
+ * Generates and sets Crashlytics change log as commits comments since last upload.
+ */
+def void setCrashlyticsChangeLog() {
+    if (getGitCommit()) {
+        setGitChangeLog()
+    } else if (getSvnRevision()) {
+        setSvnChangeLog()
+    }
+}
+
+/**
+ * Generates and sets Crashlytics change log from git commits.
+ */
+def void setGitChangeLog() {
+    String commit = getGitCommit()
+    String prevCommit = getVcsProperties().properties.GIT_PREVIOUS_COMMIT
+    println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
+
+    if (commit && prevCommit) {
+        setChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
+                " | grep -iv \"/logoff\$\"")
+    }
+}
+
+/**
+ * Generates and sets Crashlytics change log from svn commits.
+ */
+def void setSvnChangeLog() {
+    String revision = getSvnRevision()
+    String prevRevision = getVcsProperties().properties.SVN_PREVIOUS_REVISION
+    println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
+
+    if (revision && prevRevision) {
+        prevRevision = prevRevision.trim()
+
+        String username = System.getenv('SVN_USERNAME')
+        String password = System.getenv('SVN_PASSWORD')
+
+        if (username && password) {
+            println "Connecting to svn under ${username}"
+            setChangeLogFromCommand("svn log -r ${revision}:${prevRevision}" +
+                    " --username ${username} --password ${password}" +
+                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"")
+        } else {
+            println 'You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log'
+        }
+    }
+}
+
+/**
+ * Generates and sets Crashlytics change log by executing provided bash command.
+ */
+def void setChangeLogFromCommand(String command) {
+    def proc = ["bash", "-c", command].execute()
+    proc.waitFor()
+    if (proc.exitValue() != 0) {
+        println "Error: ${proc.err.text}"
+    } else {
+        def log = proc.text
+
+        println "---- CRASHLYTICS LOG ----\n" +
+                "${log}\n" +
+                "-------------------------\n"
+
+        build.ext.betaDistributionReleaseNotes = log
+    }
+}
+
+/**
+ * Returns current svn revision, only works when building with Jenkins.
+ */
+def String getSvnRevision() {
+    return System.getenv('SVN_REVISION')
+}
+
+/**
+ * Returns current git revision, only works when building with Jenkins.
+ */
+def String getGitCommit() {
+    return System.getenv('GIT_COMMIT')
+}
+
+def Properties getVcsProperties() {
+    Properties props = new Properties();
+    try {
+        props.load(new FileInputStream(getVcsPropsFileName()))
+    } catch (Exception e) {
+        println 'No previous vcs properties found'
+    }
+    return props
+}
+
+def void saveVcsProperties(Properties props) {
+    props.store(new FileWriter(getVcsPropsFileName()))
+}
+
+def String getVcsPropsFileName() {
+    String mode = System.properties.MODE
+    String modeName = mode ? mode.toLowerCase() : ''
+    return "${rootDir.absolutePath}/../vcs_${modeName}.properties"
 }
