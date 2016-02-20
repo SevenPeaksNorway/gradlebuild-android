@@ -164,7 +164,7 @@ def void setCrashlyticsChangeLog() {
  */
 def void setGitChangeLog() {
     String commit = getGitCommit()
-    String prevCommit = getVcsProperties().properties.GIT_PREVIOUS_COMMIT
+    String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
     println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
 
     if (commit && prevCommit) {
@@ -178,7 +178,7 @@ def void setGitChangeLog() {
  */
 def void setSvnChangeLog() {
     String revision = getSvnRevision()
-    String prevRevision = getVcsProperties().properties.SVN_PREVIOUS_REVISION
+    String prevRevision = getVcsProperties().SVN_PREVIOUS_REVISION
     println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
 
     if (revision && prevRevision) {
