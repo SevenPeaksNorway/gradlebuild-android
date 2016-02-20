@@ -242,7 +242,7 @@ def Properties getVcsProperties() {
 }
 
 def void saveVcsProperties(Properties props) {
-    props.store(new FileWriter(getVcsPropsFileName()))
+    props.store(new FileWriter(getVcsPropsFileName()), '')
 }
 
 def String getVcsPropsFileName() {
