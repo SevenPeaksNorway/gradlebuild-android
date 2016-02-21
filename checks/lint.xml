@@ -29,8 +29,4 @@
         <ignore regexp=".*retrofit.*" />
     </issue>
 
-    <issue id="Overdraw">
-        <ignore regexp=".*selectableItemBackground.*" />
-    </issue>
-
 </lint>
