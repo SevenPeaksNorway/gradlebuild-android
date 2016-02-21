@@ -90,10 +90,7 @@ ext.initCrashlyticsKeys = { flavor, key, secret ->
 /**
  * Sets Crashlytics change log for current build.
  *
- * Also sets up tasks to generate 'fabric.properties' file before uploading to Crashlytics.
- * 'fabric.properties' file should be excluded from version control.
- *
- * Should be called within android setup, closer to the end: "initCrashlyticsUploadTask it"
+ * Also sets up tasks to generate 'fabric.properties' file required to upload build to Crashlytics.
  */
 project.afterEvaluate {
     setCrashlyticsChangeLog()
