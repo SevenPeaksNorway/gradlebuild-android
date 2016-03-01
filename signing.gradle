@@ -1,5 +1,27 @@
-// Import this file after android plugin with 'apply from: "${rootDir}/.../signing.gradle"'
-// Note: 'signing_buildscript.gradle' file should be applied as well, see corresponding file.
+/*
+Usage example:
+
+In build.gradle:
+
+buildscript {
+    apply from: "${rootDir}/libraries/GradleBuild/signing_buildscript.gradle", to: buildscript
+}
+
+apply plugin: 'com.android.application'
+
+apply from: "${rootDir}/libraries/GradleBuild/signing.gradle"
+
+android {
+    ...
+    signingConfigs {
+        release {
+            storeFile file('[release.keystore]')
+            keyAlias '[alias_name]'
+        }
+    }
+    ...
+}
+ */
 
 apply plugin: 'com.alexvasilkov.sign'
 
