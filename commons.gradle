@@ -41,6 +41,12 @@ ext.setStringRes = { obj, key, value ->
     obj.resValue 'string', key, value
 }
 
+/**
+ * Whether we are running on build server currenly or not
+ */
+ext.isOnBuildServer = {
+    return System.getenv('BUILD_NUMBER')
+}
 
 /**
  * Sets app version name and version code.
@@ -52,13 +58,13 @@ ext.setStringRes = { obj, key, value ->
  * i.e. '1.2.1-b231'. For svn it will be latest svn revision number, for git it will be
  * a total number of commits from the branch root.
  *
- * Should be called instead of 'versionName' / 'versionCode' within defauiltConfig closure:
+ * Should be called instead of 'versionName' / 'versionCode' within defaultConfig closure:
  * "setupVersion it, 'X.Y.Z'".
  */
 ext.setupVersion = { config, version ->
     def build = null
 
-    if (System.getenv('BUILD_NUMBER')) {
+    if (isOnBuildServer()) {
         // We are running on Jenkins server
         build = System.getenv('SVN_REVISION')
         if (!build) build = 'git rev-list --count HEAD'.execute().text.trim()
@@ -102,10 +108,25 @@ ext.setOutputFileName = { appName ->
     }
 }
 
+
+/**
+ * Disabling pre-dexing to speed up build server
+ */
+if (isOnBuildServer()) {
+    rootProject.afterEvaluate {
+        rootProject.allprojects { p ->
+            if (p.hasProperty('android') && p.android) {
+                p.android.dexOptions.preDexLibraries = false
+                println "Disabling pre dex for ${p.name}"
+            }
+        }
+    }
+}
+
 /*
  * Creates build task 'ci' to use with Jenkins.
  * It expects MODE build parameter (provided with -DMODE=XXX by Jenkins) to be set to flavor name.
- * This task will assemble, check and upload debug build to crashlytics for given flavor.
+ * This task will assemble, check and upload debug build to Fabric for given flavor.
  */
 project.afterEvaluate {
     final mode = System.properties.MODE
@@ -119,10 +140,10 @@ project.afterEvaluate {
     final assembleTask = project.tasks["assemble${modeName}Debug"]
     buildTask.dependsOn assembleTask
 
-    final distrTaskName = "crashlyticsUploadDistribution${modeName}Debug"
-    if (project.tasks.asMap.containsKey(distrTaskName)) {
-        final distrTask = project.tasks[distrTaskName]
-        buildTask.dependsOn distrTask
-        distrTask.dependsOn assembleTask
+    final distTaskName = "crashlyticsUploadDistribution${modeName}Debug"
+    if (project.tasks.asMap.containsKey(distTaskName)) {
+        final distTask = project.tasks[distTaskName]
+        buildTask.dependsOn distTask
+        distTask.dependsOn assembleTask
     }
 }
