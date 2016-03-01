@@ -1,4 +1,22 @@
-// Import this file after android plugin with 'apply from: "${rootDir}/.../checks.gradle"'
+/*
+Usage example:
+
+apply from: "${rootDir}/libraries/GradleBuild/checks.gradle"
+
+Note, that you should use at least Gradle v2.11 (as set in gradle/gradle-wrapper.properties).
+
+If you need to provide custom config files use:
+
+android {
+   lintOptions {
+       lintConfig file('.../lint.xml')
+   }
+}
+
+checkstyle {
+   configFile file('.../checkstyle.xml')
+}
+*/
 
 def final REPORTS_DIR = 'build/reports'
 
