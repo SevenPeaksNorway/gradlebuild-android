@@ -4,28 +4,28 @@ Usage example:
 In build.gradle:
 
 buildscript {
-    apply from: "${rootDir}/libraries/GradleBuild/crashlytics_buildscript.gradle", to: buildscript
+    apply from: "${rootDir}/libraries/GradleBuild/fabric_buildscript.gradle", to: buildscript
 }
 
 apply plugin: 'com.android.application'
 
-apply from: "${rootDir}/libraries/GradleBuild/crashlytics.gradle"
+apply from: "${rootDir}/libraries/GradleBuild/fabric.gradle"
 
 android {
     defaultConfig {
         ...
-        ext.betaDistributionGroupAliases = 'testers-gorup' // Crashlytics testers group, if needed
+        ext.betaDistributionGroupAliases = 'testers-group' // Fabric testers group, if needed
     }
     ...
     productFlavors {
         dev {
-            initCrashlyticsKeys it, CRASH_DEV_KEY, CRASH_DEV_SECRET
+            setFabricKeys it, FABRIC_DEV_KEY, FABRIC_DEV_SECRET
         }
         stage {
-            initCrashlyticsKeys it, CRASH_STAGE_KEY, CRASH_STAGE_SECRET
+            setFabricKeys it, FABRIC_STAGE_KEY, FABRIC_STAGE_SECRET
         }
         prod {
-            initCrashlyticsKeys it, CRASH_PROD_KEY, CRASH_PROD_SECRET
+            setFabricKeys it, FABRIC_PROD_KEY, FABRIC_PROD_SECRET
         }
     }
     ...
@@ -36,7 +36,7 @@ In AndroidManifest.xml:
 <application>
     <meta-data
         android:name="io.fabric.ApiKey"
-        android:value="${crashlyticsApiKey}" />
+        android:value="${fabricApiKey}" />
 </application>
 
 In Application:
@@ -49,20 +49,20 @@ public void onCreate() {
  */
 
 
-def final CRASHLYTICS_INTERNAL_KEY = 'crashlyticsApiKey'
-def final CRASHLYTICS_INTERNAL_SECRET = 'crashlyticsApiSecret'
+def final FABRIC_INTERNAL_KEY = 'fabricApiKey'
+def final FABRIC_INTERNAL_SECRET = 'fabricApiSecret'
 
-ext.CRASH_DEV_KEY = 'f4e2c636361b7913d01f22dc3a7ab4ac37a63206'
-ext.CRASH_DEV_SECRET = 'fedb1c6fdee37d868395d5e0e45b5190941bb20923ff0dafc1632e9e0e388259'
+ext.FABRIC_DEV_KEY = 'f4e2c636361b7913d01f22dc3a7ab4ac37a63206'
+ext.FABRIC_DEV_SECRET = 'fedb1c6fdee37d868395d5e0e45b5190941bb20923ff0dafc1632e9e0e388259'
 
-ext.CRASH_STAGE_KEY = '6e30ea7c62395abb0b0917f826fb9457b892b116'
-ext.CRASH_STAGE_SECRET = '2c3ee106e1c72502c5914699ec0cbce1b26f5f6abbb9e9686d617860eb307b3d'
+ext.FABRIC_STAGE_KEY = '6e30ea7c62395abb0b0917f826fb9457b892b116'
+ext.FABRIC_STAGE_SECRET = '2c3ee106e1c72502c5914699ec0cbce1b26f5f6abbb9e9686d617860eb307b3d'
 
-ext.CRASH_PROD_KEY = 'b649c311f415564200b85234ab9926b71b4795a3'
-ext.CRASH_PROD_SECRET = '51ce4fd1963fb398cd2e6e05aebd713ec0accd920aa203e0e1b6cc2ce8d6695c'
+ext.FABRIC_PROD_KEY = 'b649c311f415564200b85234ab9926b71b4795a3'
+ext.FABRIC_PROD_SECRET = '51ce4fd1963fb398cd2e6e05aebd713ec0accd920aa203e0e1b6cc2ce8d6695c'
 
-ext.CRASH_VER_KEY = '764eb2d3c2f1900d3da04732f6fa898d0a44ba3c'
-ext.CRASH_VER_SECRET = 'be6dc4f55f4caf88a444a88fbafa774ae8ec726ce064b9913402bcdae985f049'
+ext.FABRIC_VER_KEY = '764eb2d3c2f1900d3da04732f6fa898d0a44ba3c'
+ext.FABRIC_VER_SECRET = 'be6dc4f55f4caf88a444a88fbafa774ae8ec726ce064b9913402bcdae985f049'
 
 
 repositories {
@@ -76,24 +76,24 @@ dependencies {
 apply plugin: 'io.fabric'
 
 /**
- * Sets up Crashlytics key and sectret for each flavor, since Crashlytics does not support
+ * Sets up Fabric key and secret for each flavor, since Fabric does not support
  * different key/secret for different flavors out of the box.
  *
- * Should be called within each flavor's setup closure: "initCrashlyticsKeys it, 'KEY', 'SECRET'"
+ * Should be called within each flavor's setup closure: "setFabricKeys it, 'KEY', 'SECRET'"
  */
-ext.initCrashlyticsKeys = { flavor, key, secret ->
-    flavor.set(CRASHLYTICS_INTERNAL_KEY, key)
-    flavor.set(CRASHLYTICS_INTERNAL_SECRET, secret)
-    flavor.manifestPlaceholders = [crashlyticsApiKey: key]
+ext.setFabricKeys = { flavor, key, secret ->
+    flavor.set(FABRIC_INTERNAL_KEY, key)
+    flavor.set(FABRIC_INTERNAL_SECRET, secret)
+    flavor.manifestPlaceholders = [fabricApiKey: key]
 }
 
 /**
- * Sets Crashlytics change log for current build.
+ * Sets Fabric change log for current build.
  *
- * Also sets up tasks to generate 'fabric.properties' file required to upload build to Crashlytics.
+ * Also sets up tasks to generate 'fabric.properties' file required to upload build to Fabric.
  */
 project.afterEvaluate {
-    setCrashlyticsChangeLog()
+    setFabricChangeLog()
 
     File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
 
@@ -101,8 +101,8 @@ project.afterEvaluate {
         def taskAdded = false
 
         variant.productFlavors.each { Object flavor ->
-            if (taskAdded || !flavor.hasProperty(CRASHLYTICS_INTERNAL_KEY)
-                    || !flavor.hasProperty(CRASHLYTICS_INTERNAL_SECRET)) {
+            if (taskAdded || !flavor.hasProperty(FABRIC_INTERNAL_KEY)
+                    || !flavor.hasProperty(FABRIC_INTERNAL_SECRET)) {
                 return
             }
 
@@ -110,8 +110,8 @@ project.afterEvaluate {
 
             def genTask = task("fabricGenerateProperties${suffix}") << {
                 Properties props = new Properties()
-                props.put("apiKey", flavor[CRASHLYTICS_INTERNAL_KEY])
-                props.put("apiSecret", flavor[CRASHLYTICS_INTERNAL_SECRET])
+                props.put("apiKey", flavor[FABRIC_INTERNAL_KEY])
+                props.put("apiSecret", flavor[FABRIC_INTERNAL_SECRET])
                 props.store(new FileWriter(propFile), "")
             }
 
@@ -126,13 +126,13 @@ project.afterEvaluate {
         }
 
         if (!taskAdded) {
-            throw new GradleException("No crashlytics key / secret for ${variant.name}")
+            throw new GradleException("No fabric key / secret for ${variant.name}")
         }
     }
 }
 
 /**
- * Saves last git commit / vcs revision to be used next time to generate Crashlytics change log.
+ * Saves last git commit / vcs revision to be used next time to generate Fabric change log.
  */
 def void updateVcsProperties() {
     Properties props = getVcsProperties()
@@ -146,9 +146,9 @@ def void updateVcsProperties() {
 }
 
 /**
- * Generates and sets Crashlytics change log as commits comments since last upload.
+ * Generates and sets Fabric change log as commits comments since last upload.
  */
-def void setCrashlyticsChangeLog() {
+def void setFabricChangeLog() {
     if (getGitCommit()) {
         setGitChangeLog()
     } else if (getSvnRevision()) {
@@ -157,7 +157,7 @@ def void setCrashlyticsChangeLog() {
 }
 
 /**
- * Generates and sets Crashlytics change log from git commits.
+ * Generates and sets Fabric change log from git commits.
  */
 def void setGitChangeLog() {
     String commit = getGitCommit()
@@ -171,7 +171,7 @@ def void setGitChangeLog() {
 }
 
 /**
- * Generates and sets Crashlytics change log from svn commits.
+ * Generates and sets Fabric change log from svn commits.
  */
 def void setSvnChangeLog() {
     String revision = getSvnRevision()
@@ -196,7 +196,7 @@ def void setSvnChangeLog() {
 }
 
 /**
- * Generates and sets Crashlytics change log by executing provided bash command.
+ * Generates and sets Fabric change log by executing provided bash command.
  */
 def void setChangeLogFromCommand(String command) {
     def proc = ["bash", "-c", command].execute()
@@ -206,7 +206,7 @@ def void setChangeLogFromCommand(String command) {
     } else {
         def log = proc.text
 
-        println "---- CRASHLYTICS LOG ----\n" +
+        println "---- FABRIC LOG ----\n" +
                 "${log}\n" +
                 "-------------------------\n"
 
@@ -232,7 +232,7 @@ def Properties getVcsProperties() {
     Properties props = new Properties();
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
-    } catch (Exception e) {
+    } catch (Exception ignored) {
         println 'No previous vcs properties found'
     }
     return props

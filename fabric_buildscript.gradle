@@ -1,7 +1,7 @@
 // Import this file inside buildscript section of your build.gradle like this:
 //
 // buildscript {
-//     apply from: "${rootDir}/.../crashlytics_buildscript.gradle", to: buildscript
+//     apply from: "${rootDir}/.../fabric_buildscript.gradle", to: buildscript
 // }
 
 repositories {
