@@ -68,6 +68,7 @@ task checkstyle(type: Checkstyle) {
             destination "${REPORTS_DIR}/checkstyle/checkstyle-result.xml"
         }
     }
+    ignoreFailures = true // Errors report will be generated and shown by Jenkins
 }
 
 project.tasks.getByName('check').dependsOn 'checkstyle'
