@@ -129,9 +129,9 @@ if (isOnBuildServer()) {
  * This task will assemble, check and upload debug build to Fabric for given flavor.
  */
 project.afterEvaluate {
-    final mode = System.properties.MODE
-    final modeName = mode ? mode.toLowerCase().capitalize() : ''
-    modeName.replaceAll(/_\w/) { it[1].toUpperCase() } // Underscores to camel case
+    String mode = System.properties.MODE
+    String modeName = mode ? mode.toLowerCase().capitalize() : ''
+    modeName = modeName.replaceAll(/_\w/) { it[1].toUpperCase() } // Underscores to camel case
 
     final buildTask = project.task 'ci'
 
