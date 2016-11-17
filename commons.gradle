@@ -94,15 +94,14 @@ ext.setOutputFileName = { appName ->
             String apkName = "${appName}-${output.baseName}-${variant.versionName}"
             String dir = output.outputFile.parent
 
-            File zipIn = new File(dir, "${apkName}.unaligned_apk")
-            File zipOut = new File(dir, "${apkName}.apk")
-
-            if (output.zipAlign) {
-                output.zipAlign.inputFile = zipIn
-                output.zipAlign.outputFile = zipOut
-            }
             if (output.packageApplication) {
-                output.packageApplication.outputFile = zipIn
+                if (output.zipAlign) {
+                    output.packageApplication.outputFile = new File(dir, "${apkName}.unaligned_apk")
+                    output.zipAlign.inputFile = output.packageApplication.outputFile
+                    output.zipAlign.outputFile = new File(dir, "${apkName}.apk")
+                } else {
+                    output.packageApplication.outputFile = new File(dir, "${apkName}.apk")
+                }
             }
         }
     }
