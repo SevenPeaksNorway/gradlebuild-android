@@ -52,6 +52,7 @@ public void onCreate() {
 def final FABRIC_INTERNAL_KEY = 'fabricApiKey'
 def final FABRIC_INTERNAL_SECRET = 'fabricApiSecret'
 
+// Apphuset organizations keys (no suffixes for backward compatibility)
 ext.FABRIC_DEV_KEY = 'f4e2c636361b7913d01f22dc3a7ab4ac37a63206'
 ext.FABRIC_DEV_SECRET = 'fedb1c6fdee37d868395d5e0e45b5190941bb20923ff0dafc1632e9e0e388259'
 
@@ -63,6 +64,16 @@ ext.FABRIC_PROD_SECRET = '51ce4fd1963fb398cd2e6e05aebd713ec0accd920aa203e0e1b6cc
 
 ext.FABRIC_VER_KEY = '764eb2d3c2f1900d3da04732f6fa898d0a44ba3c'
 ext.FABRIC_VER_SECRET = 'be6dc4f55f4caf88a444a88fbafa774ae8ec726ce064b9913402bcdae985f049'
+
+// 7peaks organizations keys
+ext.FABRIC_DEV_KEY_7P = 'f5ab88852982a2fe94210e9c7412b747c77b5316'
+ext.FABRIC_DEV_SECRET_7P = 'cd59b4dbcc64564fd7e790deacc0eb0b9c61d86b43ab57525e6b075d3f9080be'
+
+ext.FABRIC_STAGE_KEY_7P = 'ee992485b84addd65b74b14bf2d7201007408a83'
+ext.FABRIC_STAGE_SECRET_7P = 'e1c1060725040a071c424ff61e752d4faf06d31a45fd41e42c47bea9f689f631'
+
+ext.FABRIC_PROD_KEY_7P = '9dcf12406766ccabfa96effa905ded3c78b180f5'
+ext.FABRIC_PROD_SECRET_7P = '10573b760e1b85fe28eaa9bc4680ce534f8e3e278782d2bb50dc882594768cff'
 
 
 repositories {
