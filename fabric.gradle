@@ -81,7 +81,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.crashlytics.sdk.android:crashlytics:2.5.5'
+    compile 'com.crashlytics.sdk.android:crashlytics:2.6.6'
 }
 
 apply plugin: 'io.fabric'
@@ -95,7 +95,8 @@ apply plugin: 'io.fabric'
 ext.setFabricKeys = { flavor, key, secret ->
     flavor.set(FABRIC_INTERNAL_KEY, key)
     flavor.set(FABRIC_INTERNAL_SECRET, secret)
-    flavor.manifestPlaceholders = [fabricApiKey: key]
+    flavor.manifestPlaceholders = [fabricApiKey: key ?: '']
+    flavor.buildConfigField 'boolean', 'FABRIC_ENABLED', key ? 'true' : 'false'
 }
 
 /**
@@ -111,33 +112,44 @@ project.afterEvaluate {
     android.applicationVariants.all { variant ->
         def taskAdded = false
 
-        variant.productFlavors.each { Object flavor ->
-            if (taskAdded || !flavor.hasProperty(FABRIC_INTERNAL_KEY)
-                    || !flavor.hasProperty(FABRIC_INTERNAL_SECRET)) {
+        variant.productFlavors.each { flavor ->
+            if (taskAdded) {
                 return
             }
 
-            def suffix = variant.name.capitalize()
+            if (flavor.hasProperty(FABRIC_INTERNAL_KEY)
+                    && flavor.hasProperty(FABRIC_INTERNAL_SECRET)) {
 
-            def genTask = task("fabricGenerateProperties${suffix}") << {
-                Properties props = new Properties()
-                props.put("apiKey", flavor[FABRIC_INTERNAL_KEY])
-                props.put("apiSecret", flavor[FABRIC_INTERNAL_SECRET])
-                props.store(new FileWriter(propFile), "")
+                String key = flavor.getAt(FABRIC_INTERNAL_KEY)
+                String secret = flavor.getAt(FABRIC_INTERNAL_SECRET)
+                String suffix = variant.name.capitalize()
+
+                if (key && secret) {
+                    Task genTask = task("fabricGenerateProperties${suffix}") << {
+                        Properties props = new Properties()
+                        props.put("apiKey", key)
+                        props.put("apiSecret", secret)
+                        props.store(new FileWriter(propFile), "")
+                    }
+
+                    Task upload = project.tasks.getByName("crashlyticsUploadDistribution${suffix}")
+                    upload.dependsOn genTask
+                    upload.doLast {
+                        propFile.delete()
+                        updateVcsProperties()
+                    }
+                } else {
+                    Task fabricGen = project.tasks.getByName("fabricGenerateResources${suffix}")
+                    fabricGen.enabled = false
+                }
+
+                taskAdded = true
             }
-
-            project.tasks.getByName("crashlyticsUploadDistribution${suffix}").dependsOn genTask
-
-            project.tasks.getByName("crashlyticsUploadDistribution${suffix}").doLast {
-                propFile.delete()
-                updateVcsProperties()
-            }
-
-            taskAdded = true
         }
 
         if (!taskAdded) {
-            throw new GradleException("No fabric key / secret for ${variant.name}")
+            throw new GradleException("No fabric key & secret are set for ${variant.name}. "
+                    + "Use 'setFabricKeys it, {key}, {secret}' method during flavor setup.")
         }
     }
 }
@@ -240,7 +252,7 @@ def String getGitCommit() {
 }
 
 def Properties getVcsProperties() {
-    Properties props = new Properties();
+    Properties props = new Properties()
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
     } catch (Exception ignored) {

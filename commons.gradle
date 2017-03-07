@@ -16,7 +16,7 @@ android {
         }
     }
     ...
-    setOutputFileName it, 'appname'
+    setOutputFileName 'appname'
 }
  */
 
@@ -86,7 +86,7 @@ ext.setupVersion = { config, version ->
 /**
  * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
  *
- * Should be called within android setup, closer to the end: "setOutputFileName it, 'appName'".
+ * Should be called within android setup, closer to the end: "setOutputFileName 'appName'".
  */
 ext.setOutputFileName = { appName ->
     android.applicationVariants.all { variant ->
