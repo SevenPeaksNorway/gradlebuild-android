@@ -49,9 +49,6 @@ public void onCreate() {
  */
 
 
-def final FABRIC_INTERNAL_KEY = 'fabricApiKey'
-def final FABRIC_INTERNAL_SECRET = 'fabricApiSecret'
-
 // Apphuset organizations keys (no suffixes for backward compatibility)
 ext.FABRIC_DEV_KEY = 'f4e2c636361b7913d01f22dc3a7ab4ac37a63206'
 ext.FABRIC_DEV_SECRET = 'fedb1c6fdee37d868395d5e0e45b5190941bb20923ff0dafc1632e9e0e388259'
@@ -86,6 +83,9 @@ dependencies {
 
 apply plugin: 'io.fabric'
 
+def final Map fabricKeys = new HashMap();
+def final Map fabricSecrets = new HashMap();
+
 /**
  * Sets up Fabric key and secret for each flavor, since Fabric does not support
  * different key/secret for different flavors out of the box.
@@ -93,8 +93,8 @@ apply plugin: 'io.fabric'
  * Should be called within each flavor's setup closure: "setFabricKeys it, 'KEY', 'SECRET'"
  */
 ext.setFabricKeys = { flavor, key, secret ->
-    flavor.set(FABRIC_INTERNAL_KEY, key)
-    flavor.set(FABRIC_INTERNAL_SECRET, secret)
+    fabricKeys.put(flavor.name, key)
+    fabricSecrets.put(flavor.name, secret)
     flavor.manifestPlaceholders = [fabricApiKey: key ?: '']
     flavor.buildConfigField 'boolean', 'FABRIC_ENABLED', key ? 'true' : 'false'
 }
@@ -117,11 +117,9 @@ project.afterEvaluate {
                 return
             }
 
-            if (flavor.hasProperty(FABRIC_INTERNAL_KEY)
-                    && flavor.hasProperty(FABRIC_INTERNAL_SECRET)) {
-
-                String key = flavor.getAt(FABRIC_INTERNAL_KEY)
-                String secret = flavor.getAt(FABRIC_INTERNAL_SECRET)
+            if (fabricKeys.containsKey(flavor.name) && fabricSecrets.containsKey(flavor.name)) {
+                String key = fabricKeys.get(flavor.name)
+                String secret = fabricSecrets.get(flavor.name)
                 String suffix = variant.name.capitalize()
 
                 if (key && secret) {
