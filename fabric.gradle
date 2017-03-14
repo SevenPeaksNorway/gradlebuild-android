@@ -85,6 +85,7 @@ apply plugin: 'io.fabric'
 
 def final Map fabricKeys = new HashMap();
 def final Map fabricSecrets = new HashMap();
+def String changelogCached;
 
 /**
  * Sets up Fabric key and secret for each flavor, since Fabric does not support
@@ -95,8 +96,15 @@ def final Map fabricSecrets = new HashMap();
 ext.setFabricKeys = { flavor, key, secret ->
     fabricKeys.put(flavor.name, key)
     fabricSecrets.put(flavor.name, secret)
+
     flavor.manifestPlaceholders = [fabricApiKey: key ?: '']
     flavor.buildConfigField 'boolean', 'FABRIC_ENABLED', key ? 'true' : 'false'
+
+    if (!changelogCached) {
+        changelogCached = getChangeLog()
+    }
+
+    flavor.ext.betaDistributionReleaseNotes = changelogCached
 }
 
 /**
@@ -106,14 +114,11 @@ ext.setFabricKeys = { flavor, key, secret ->
  */
 project.afterEvaluate {
     File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
-    String changelog = getChangeLog()
 
     android.applicationVariants.all { variant ->
         def taskAdded = false
 
         variant.productFlavors.each { flavor ->
-            flavor.ext.betaDistributionReleaseNotes = changelog
-
             if (taskAdded) {
                 return
             }
