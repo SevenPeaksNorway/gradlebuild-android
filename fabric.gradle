@@ -105,14 +105,15 @@ ext.setFabricKeys = { flavor, key, secret ->
  * Also sets up tasks to generate 'fabric.properties' file required to upload build to Fabric.
  */
 project.afterEvaluate {
-    setFabricChangeLog()
-
     File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
+    String changelog = getChangeLog()
 
     android.applicationVariants.all { variant ->
         def taskAdded = false
 
         variant.productFlavors.each { flavor ->
+            flavor.ext.betaDistributionReleaseNotes = changelog
+
             if (taskAdded) {
                 return
             }
@@ -123,7 +124,8 @@ project.afterEvaluate {
                 String suffix = variant.name.capitalize()
 
                 if (key && secret) {
-                    Task genTask = task("fabricGenerateProperties${suffix}") << {
+                    Task genTask = task("fabricGenerateProperties${suffix}")
+                    genTask.doFirst {
                         Properties props = new Properties()
                         props.put("apiKey", key)
                         props.put("apiSecret", secret)
@@ -169,32 +171,34 @@ def void updateVcsProperties() {
 /**
  * Generates and sets Fabric change log as commits comments since last upload.
  */
-def void setFabricChangeLog() {
+def String getChangeLog() {
     if (getGitCommit()) {
-        setGitChangeLog()
+        return getGitChangeLog()
     } else if (getSvnRevision()) {
-        setSvnChangeLog()
+        return getSvnChangeLog()
     }
+    return null
 }
 
 /**
  * Generates and sets Fabric change log from git commits.
  */
-def void setGitChangeLog() {
+def String getGitChangeLog() {
     String commit = getGitCommit()
     String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
     println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
 
     if (commit && prevCommit) {
-        setChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
+        return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
                 " | grep -iv \"/logoff\$\"")
     }
+    return null
 }
 
 /**
  * Generates and sets Fabric change log from svn commits.
  */
-def void setSvnChangeLog() {
+def String getSvnChangeLog() {
     String revision = getSvnRevision()
     String prevRevision = getVcsProperties().SVN_PREVIOUS_REVISION
     println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
@@ -207,19 +211,20 @@ def void setSvnChangeLog() {
 
         if (username && password) {
             println "Connecting to svn under ${username}"
-            setChangeLogFromCommand("svn log -r ${revision}:${prevRevision}" +
+            return getChangeLogFromCommand("svn log -r ${revision}:${prevRevision}" +
                     " --username ${username} --password ${password}" +
                     " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"")
         } else {
             println 'You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log'
         }
     }
+    return null
 }
 
 /**
  * Generates and sets Fabric change log by executing provided bash command.
  */
-def void setChangeLogFromCommand(String command) {
+def String getChangeLogFromCommand(String command) {
     def proc = ["bash", "-c", command].execute()
     proc.waitFor()
     if (proc.exitValue() != 0) {
@@ -231,7 +236,7 @@ def void setChangeLogFromCommand(String command) {
                 "${log}\n" +
                 "-------------------------\n"
 
-        ext.betaDistributionReleaseNotes = log
+        return log
     }
 }
 
