@@ -42,7 +42,7 @@ ext.setStringRes = { obj, key, value ->
 }
 
 /**
- * Whether we are running on build server currenly or not
+ * Whether we are running on build server currently or not
  */
 ext.isOnBuildServer = {
     return System.getenv('BUILD_NUMBER')

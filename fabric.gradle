@@ -231,7 +231,7 @@ def void setChangeLogFromCommand(String command) {
                 "${log}\n" +
                 "-------------------------\n"
 
-        build.ext.betaDistributionReleaseNotes = log
+        ext.betaDistributionReleaseNotes = log
     }
 }
 
