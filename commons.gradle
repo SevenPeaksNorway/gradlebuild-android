@@ -112,12 +112,10 @@ ext.setOutputFileName = { appName ->
  * Disabling pre-dexing to speed up build server
  */
 if (isOnBuildServer()) {
-    rootProject.afterEvaluate {
-        rootProject.allprojects { p ->
-            if (p.hasProperty('android') && p.android) {
-                p.android.dexOptions.preDexLibraries = false
-                println "Disabling pre dex for ${p.name}"
-            }
+    rootProject.allprojects { p ->
+        if (p.hasProperty('android') && p.android) {
+            p.android.dexOptions.preDexLibraries = false
+            println "Disabling pre dex for ${p.name}"
         }
     }
 }
