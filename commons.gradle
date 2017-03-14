@@ -132,17 +132,32 @@ project.afterEvaluate {
     String modeName = mode ? mode.toLowerCase().capitalize() : ''
     modeName = modeName.replaceAll(/_\w/) { it[1].toUpperCase() } // Underscores to camel case
 
-    final buildTask = project.task 'ci'
+    final ci = 'ci'
+    final checks = "checks${modeName}"
+    final checkstyle = 'checkstyle'
+    final lint = "lint${modeName}Debug"
+    final unitTest = "test${modeName}DebugUnitTest"
+    final assemble = "assemble${modeName}Debug"
+    final upload = "crashlyticsUploadDistribution${modeName}Debug"
 
-    buildTask.dependsOn 'check'
+    project.task ci
+    project.task checks
 
-    final assembleTask = project.tasks["assemble${modeName}Debug"]
-    buildTask.dependsOn assembleTask
+    addTasksDep ci, assemble
+    addTasksDep ci, checks
+    addTasksDep ci, upload
 
-    final distTaskName = "crashlyticsUploadDistribution${modeName}Debug"
-    if (project.tasks.asMap.containsKey(distTaskName)) {
-        final distTask = project.tasks[distTaskName]
-        buildTask.dependsOn distTask
-        distTask.dependsOn assembleTask
+    addTasksDep checks, assemble
+    addTasksDep checks, checkstyle
+    addTasksDep checks, lint
+    addTasksDep checks, unitTest
+
+    addTasksDep upload, assemble
+    addTasksDep upload, checks
+}
+
+def void addTasksDep(String task, String taskTarget) {
+    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
+        project.tasks[task].dependsOn taskTarget
     }
 }

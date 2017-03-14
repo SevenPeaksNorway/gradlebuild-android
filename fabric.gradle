@@ -238,14 +238,14 @@ def void setChangeLogFromCommand(String command) {
 /**
  * Returns current svn revision, only works when building with Jenkins.
  */
-def String getSvnRevision() {
+static def String getSvnRevision() {
     return System.getenv('SVN_REVISION')
 }
 
 /**
  * Returns current git revision, only works when building with Jenkins.
  */
-def String getGitCommit() {
+static def String getGitCommit() {
     return System.getenv('GIT_COMMIT')
 }
 
