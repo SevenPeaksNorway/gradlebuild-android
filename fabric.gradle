@@ -195,7 +195,7 @@ def String getGitChangeLog() {
 
     if (commit && prevCommit) {
         return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
-                " | grep -iv \"/logoff\$\"")
+                " | grep -ivE \"^Merged.*\$|/logoff\$\"")
     }
     return null
 }
@@ -218,7 +218,7 @@ def String getSvnChangeLog() {
             println "Connecting to svn under ${username}"
             return getChangeLogFromCommand("svn log -r ${revision}:${prevRevision}" +
                     " --username ${username} --password ${password}" +
-                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|/logoff\$\"")
+                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|^Merged.*\$|/logoff\$\"")
         } else {
             println 'You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log'
         }
