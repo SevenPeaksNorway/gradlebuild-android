@@ -14,19 +14,8 @@ apply from: "${rootDir}/libraries/GradleBuild/fabric.gradle"
 android {
     defaultConfig {
         ...
-        ext.betaDistributionGroupAliases = 'testers-group' // Fabric testers group, if needed
-    }
-    ...
-    productFlavors {
-        dev {
-            setFabricKeys it, FABRIC_DEV_KEY, FABRIC_DEV_SECRET
-        }
-        stage {
-            setFabricKeys it, FABRIC_STAGE_KEY, FABRIC_STAGE_SECRET
-        }
-        prod {
-            setFabricKeys it, FABRIC_PROD_KEY, FABRIC_PROD_SECRET
-        }
+        setFabricKeys it, 'FABRIC_DEV_KEY', 'FABRIC_DEV_SECRET'
+        setFabricGroup it, 'testers-group'
     }
     ...
 }
@@ -48,31 +37,6 @@ public void onCreate() {
 }
  */
 
-
-// Apphuset organizations keys (no suffixes for backward compatibility)
-ext.FABRIC_DEV_KEY = 'f4e2c636361b7913d01f22dc3a7ab4ac37a63206'
-ext.FABRIC_DEV_SECRET = 'fedb1c6fdee37d868395d5e0e45b5190941bb20923ff0dafc1632e9e0e388259'
-
-ext.FABRIC_STAGE_KEY = '6e30ea7c62395abb0b0917f826fb9457b892b116'
-ext.FABRIC_STAGE_SECRET = '2c3ee106e1c72502c5914699ec0cbce1b26f5f6abbb9e9686d617860eb307b3d'
-
-ext.FABRIC_PROD_KEY = 'b649c311f415564200b85234ab9926b71b4795a3'
-ext.FABRIC_PROD_SECRET = '51ce4fd1963fb398cd2e6e05aebd713ec0accd920aa203e0e1b6cc2ce8d6695c'
-
-ext.FABRIC_VER_KEY = '764eb2d3c2f1900d3da04732f6fa898d0a44ba3c'
-ext.FABRIC_VER_SECRET = 'be6dc4f55f4caf88a444a88fbafa774ae8ec726ce064b9913402bcdae985f049'
-
-// 7peaks organizations keys
-ext.FABRIC_DEV_KEY_7P = 'f5ab88852982a2fe94210e9c7412b747c77b5316'
-ext.FABRIC_DEV_SECRET_7P = 'cd59b4dbcc64564fd7e790deacc0eb0b9c61d86b43ab57525e6b075d3f9080be'
-
-ext.FABRIC_STAGE_KEY_7P = 'ee992485b84addd65b74b14bf2d7201007408a83'
-ext.FABRIC_STAGE_SECRET_7P = 'e1c1060725040a071c424ff61e752d4faf06d31a45fd41e42c47bea9f689f631'
-
-ext.FABRIC_PROD_KEY_7P = '9dcf12406766ccabfa96effa905ded3c78b180f5'
-ext.FABRIC_PROD_SECRET_7P = '10573b760e1b85fe28eaa9bc4680ce534f8e3e278782d2bb50dc882594768cff'
-
-
 repositories {
     maven { url 'https://maven.fabric.io/public' }
 }
@@ -85,17 +49,31 @@ apply plugin: 'io.fabric'
 
 def final Map fabricKeys = new HashMap();
 def final Map fabricSecrets = new HashMap();
+def final Map fabricSkips = new HashMap();
 def String changelogCached;
 
 /**
  * Sets up Fabric key and secret for each flavor, since Fabric does not support
  * different key/secret for different flavors out of the box.
  *
- * Should be called within each flavor's setup closure: "setFabricKeys it, 'KEY', 'SECRET'"
+ * If both key and secret are null then keys verification will be turned off, otherwise
+ * build will fail until all flavors get their set of keys.
+ *
+ * To set up default keys for all flavors this method should be called from defaultConfig section.
+ *
+ * Should be called within each flavor's setup closure or in defaultConfig section:
+ * "setFabricKeys it, 'KEY', 'SECRET'"
  */
 ext.setFabricKeys = { flavor, key, secret ->
+    if (!key && secret) {
+        throw new GradleException("Missing Fabric key")
+    } else if (key && !secret) {
+        throw new GradleException("Missing Fabric secret")
+    }
+
     fabricKeys.put(flavor.name, key)
     fabricSecrets.put(flavor.name, secret)
+    fabricSkips.put(flavor.name, !key && !secret)
 
     flavor.manifestPlaceholders = [fabricApiKey: key ?: '']
     flavor.buildConfigField 'boolean', 'FABRIC_ENABLED', key ? 'true' : 'false'
@@ -107,54 +85,78 @@ ext.setFabricKeys = { flavor, key, secret ->
     flavor.ext.betaDistributionReleaseNotes = changelogCached
 }
 
+ext.setFabricGroup = { flavor, group ->
+    flavor.ext.betaDistributionGroupAliases = group
+}
+
 /**
  * Sets Fabric change log for current build.
  *
  * Also sets up tasks to generate 'fabric.properties' file required to upload build to Fabric.
  */
 project.afterEvaluate {
-    File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
+    final File propFile = new File("${project.projectDir.absolutePath}/fabric.properties")
+    final String DEFAULT_FLAVOR = 'main'
+
+    final String defaultKey = fabricKeys.get(DEFAULT_FLAVOR)
+    final String defaultSecret = fabricSecrets.get(DEFAULT_FLAVOR)
+    final boolean defaultSkip = fabricSkips.get(DEFAULT_FLAVOR)
 
     android.applicationVariants.all { variant ->
-        def taskAdded = false
+        final String suffix = variant.name.capitalize()
 
-        variant.productFlavors.each { flavor ->
-            if (taskAdded) {
+        def variantReady = false
+        def variantSkip = false
+
+        final List<String> flavors = variant.productFlavors.collect { it.name }
+        if (flavors.isEmpty()) {
+            flavors.add('') // Adding empty flavor if there are no flavors
+        }
+
+        flavors.each { flavor ->
+            if (variantReady) {
                 return
             }
 
-            if (fabricKeys.containsKey(flavor.name) && fabricSecrets.containsKey(flavor.name)) {
-                String key = fabricKeys.get(flavor.name)
-                String secret = fabricSecrets.get(flavor.name)
-                String suffix = variant.name.capitalize()
+            final boolean skip = fabricSkips.get(flavor)
+            if (skip) {
+                variantSkip = true
+                variantReady = true
+                return
+            }
 
-                if (key && secret) {
-                    Task genTask = task("fabricGenerateProperties${suffix}")
-                    genTask.doFirst {
-                        Properties props = new Properties()
-                        props.put("apiKey", key)
-                        props.put("apiSecret", secret)
-                        props.store(new FileWriter(propFile), "")
-                    }
+            final String key = fabricKeys.get(flavor) ?: defaultKey
+            final String secret = fabricSecrets.get(flavor) ?: defaultSecret
 
-                    Task upload = project.tasks.getByName("crashlyticsUploadDistribution${suffix}")
-                    upload.dependsOn genTask
-                    upload.doLast {
-                        propFile.delete()
-                        updateVcsProperties()
-                    }
-                } else {
-                    Task fabricGen = project.tasks.getByName("fabricGenerateResources${suffix}")
-                    fabricGen.enabled = false
+            if (key && secret) {
+                Task genTask = task("fabricGenerateProperties${suffix}")
+                genTask.doFirst {
+                    final Properties props = new Properties()
+                    props.put("apiKey", key)
+                    props.put("apiSecret", secret)
+                    props.store(new FileWriter(propFile), "")
                 }
 
-                taskAdded = true
+                Task upload = project.tasks.getByName("crashlyticsUploadDistribution${suffix}")
+                upload.dependsOn genTask
+                upload.doLast {
+                    propFile.delete()
+                    updateVcsProperties()
+                }
+
+                variantReady = true
             }
         }
 
-        if (!taskAdded) {
-            throw new GradleException("No fabric key & secret are set for ${variant.name}. "
-                    + "Use 'setFabricKeys it, {key}, {secret}' method during flavor setup.")
+        if (!variantReady) {
+            if (variantSkip || defaultSkip) {
+                // Turning Fabric off
+                Task fabricGen = project.tasks.getByName("fabricGenerateResources${suffix}")
+                fabricGen.enabled = false
+            } else {
+                throw new GradleException("No fabric key & secret are set for ${variant.name}. "
+                        + "Use 'setFabricKeys it, {key}, {secret}' method during flavor setup.")
+            }
         }
     }
 }
@@ -167,61 +169,21 @@ def void updateVcsProperties() {
     if (getGitCommit()) {
         props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
         saveVcsProperties(props)
-    } else if (getSvnRevision()) {
-        props.put('SVN_PREVIOUS_REVISION', getSvnRevision())
-        saveVcsProperties(props)
     }
 }
 
 /**
- * Generates and sets Fabric change log as commits comments since last upload.
+ * Generates and sets Fabric change log from git commits comments since last upload.
  */
 def String getChangeLog() {
-    if (getGitCommit()) {
-        return getGitChangeLog()
-    } else if (getSvnRevision()) {
-        return getSvnChangeLog()
-    }
-    return null
-}
+    final String commit = getGitCommit()
+    final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
 
-/**
- * Generates and sets Fabric change log from git commits.
- */
-def String getGitChangeLog() {
-    String commit = getGitCommit()
-    String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
     println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
 
     if (commit && prevCommit) {
         return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
                 " | grep -ivE \"^Merged.*\$|/logoff\$\"")
-    }
-    return null
-}
-
-/**
- * Generates and sets Fabric change log from svn commits.
- */
-def String getSvnChangeLog() {
-    String revision = getSvnRevision()
-    String prevRevision = getVcsProperties().SVN_PREVIOUS_REVISION
-    println "SVN_REVISION: ${revision} / SVN_PREVIOUS_REVISION: ${prevRevision}"
-
-    if (revision && prevRevision) {
-        prevRevision = prevRevision.trim()
-
-        String username = System.getenv('SVN_USERNAME')
-        String password = System.getenv('SVN_PASSWORD')
-
-        if (username && password) {
-            println "Connecting to svn under ${username}"
-            return getChangeLogFromCommand("svn log -r ${revision}:${prevRevision}" +
-                    " --username ${username} --password ${password}" +
-                    " | grep -ivE \"^r[0-9]+\\s\\||^\$|^\\-+\$|^Merged.*\$|/logoff\$\"")
-        } else {
-            println 'You should define SVN_USERNAME and SVN_PASSWORD build params to load svn log'
-        }
     }
     return null
 }
@@ -246,13 +208,6 @@ def String getChangeLogFromCommand(String command) {
 }
 
 /**
- * Returns current svn revision, only works when building with Jenkins.
- */
-static def String getSvnRevision() {
-    return System.getenv('SVN_REVISION')
-}
-
-/**
  * Returns current git revision, only works when building with Jenkins.
  */
 static def String getGitCommit() {
@@ -260,7 +215,7 @@ static def String getGitCommit() {
 }
 
 def Properties getVcsProperties() {
-    Properties props = new Properties()
+    final Properties props = new Properties()
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
     } catch (Exception ignored) {

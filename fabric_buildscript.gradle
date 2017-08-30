@@ -9,5 +9,5 @@ repositories {
 }
 
 dependencies {
-    classpath 'io.fabric.tools:gradle:1.22.1'
+    classpath 'io.fabric.tools:gradle:1.24.1'
 }
