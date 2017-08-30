@@ -1,4 +1,6 @@
 /*
+NOTE: Consider using play_store.gradle script instead when possible.
+
 Usage example:
 
 In build.gradle:

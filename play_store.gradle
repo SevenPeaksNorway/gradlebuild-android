@@ -1,0 +1,85 @@
+/*
+In order to upload release builds directly to Play you'll need to set up "App Sign" feature
+in Play console. Once ready upload keystore along with its password should be set up in script.
+Note, that password for 'upload' keystore is not a big secret. Upload keystore is only used
+to upload builds to Play, after that apk will be re-signed with a real release keystore.
+
+You will also need to set up a service account in Play console that will have access to API and
+can upload new builds to Alpha and Beta tracks. Note, that it should not have access to Production
+track to prevent accidental releases. Once ready you should download a json file with
+account credentials and save it as 'play_account.json' along with build script.
+
+Once everything is set up you can upload new builds with:
+./gradlew publishApkProdRelease
+
+
+Usage example in build.gradle:
+
+buildscript {
+    apply from: "${rootDir}/libraries/GradleBuild/play_store_buildscript.gradle", to: buildscript
+}
+
+apply plugin: 'com.android.application'
+
+apply from: "${rootDir}/libraries/GradleBuild/play_store.gradle"
+
+android {
+    ...
+    signingConfigs {
+        release {
+            storeFile file('upload.jks')
+            keyAlias 'upload'
+            storePassword '[password]'
+            keyPassword '[password]'
+        }
+    }
+    ...
+}
+
+
+If you need to provide different Play account credentials then use:
+
+android {
+    playAccountConfigs {
+        config {
+            jsonFile = file('[path/to/account/creds/json]')
+        }
+    }
+}
+
+ */
+
+apply plugin: 'com.github.triplet.play'
+
+android {
+    playAccountConfigs {
+        config {
+            jsonFile = file('play_account.json')
+        }
+    }
+
+    defaultConfig {
+        playAccountConfig = playAccountConfigs.config
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+        }
+        release {
+            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+            keyAlias 'androiddebugkey'
+            storePassword 'debug'
+            keyPassword 'debug'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+}
