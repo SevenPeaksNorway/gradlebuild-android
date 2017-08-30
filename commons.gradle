@@ -16,33 +16,13 @@ android {
         }
     }
     ...
-    setOutputFileName 'appname'
+    setOutputFileName 'app-name'
 }
  */
 
 
 /**
- * Adds string field to the generated BuildConfig class.
- *
- * Can be called within defaultConfig, build type or flavor initialization closure:
- * "setStringField it, 'NAME', 'VALUE'".
- */
-ext.setStringField = { obj, key, value ->
-    obj.buildConfigField 'String', key, "\"${value}\""
-}
-
-/**
- * Adds string resource to be accessible as R.string.key.
- *
- * Can be called within defaultConfig, build type or flavor initialization closure:
- * "setStringRes it, 'name', 'value'".
- */
-ext.setStringRes = { obj, key, value ->
-    obj.resValue 'string', key, value
-}
-
-/**
- * Whether we are running on build server currently or not
+ * Whether we are running on build server currently or not.
  */
 ext.isOnBuildServer = {
     return System.getenv('BUILD_NUMBER')
@@ -52,35 +32,77 @@ ext.isOnBuildServer = {
  * Sets app version name and version code.
  *
  * Provided version should be in form 'X.Y.Z', these version will be parsed and version code will be
- * generated from it as 'X * 10000 + Y * 100 + Z', i.e. '1.2.1' will be converted to '10201'.
+ * generated from it as '(X * 10000 + Y * 100 + Z) * 10000 + build_number'.
+ * E.g. if version name is '1.2.3' and build number is 456 then resulting code will be: '102030456'.
  *
- * When building on build server version name will be extended to contain build number,
- * i.e. '1.2.1-b231'. For svn it will be latest svn revision number, for git it will be
- * a total number of commits from the branch root.
+ * When building on build server version name will be extended to contain a build number.
+ * E.g. '1.2.3-b456'. Build number is a total number of commits from the branch root.
  *
  * Should be called instead of 'versionName' / 'versionCode' within defaultConfig closure:
  * "setupVersion it, 'X.Y.Z'".
  */
 ext.setupVersion = { config, version ->
-    def build = null
+    def final buildNumber = getBuildNumber()
+    def final baseCode = getBaseVersionCode(version)
 
-    if (isOnBuildServer()) {
-        // We are running on Jenkins server
-        build = System.getenv('SVN_REVISION')
-        if (!build) build = 'git rev-list --count HEAD'.execute().text.trim()
+    config.versionCode baseCode
+    config.versionName version
+
+    println "------ BASE VERSION -----\n" +
+            "-- NAME = ${version}\n" +
+            "-- CODE = ${baseCode}\n" +
+            "-------------------------"
+
+    // We also need to fine-tune version name and code for different cases
+    project.afterEvaluate {
+        println "---- FLAVOR VERSIONS ----"
+        android.applicationVariants.all { variant ->
+            if (variant.buildType.name == 'release') {
+                // Build number should be included to all release version codes,
+                // since each upload to Google Play should have increased version code.
+                variant.mergedFlavor.versionCode = baseCode + buildNumber
+                println "-- CODE / ${variant.name}: ${variant.mergedFlavor.versionCode}"
+            } else if (isOnBuildServer()) {
+                variant.mergedFlavor.versionName = "${version}-b${buildNumber}"
+                println "-- NAME / ${variant.name}: ${variant.mergedFlavor.versionName}"
+            }
+        }
+        println "-------------------------"
+    }
+}
+
+ext.getBaseVersionCode = { version ->
+    // Version code has next format: XYYZZBBBB,
+    // where X is a major version, Y is minor, Z is patch and B is build number (optional).
+    // Since version code is an integer we are limited with 21.47.48.3647 (max int).
+    def (major, minor, patch) = version.tokenize('.')
+    if (major.toInteger() > 20) {
+        throw new GradleException("Major part of version name cannot be bigger than 20")
+    } else if (minor.toInteger() > 99) {
+        throw new GradleException("Minor part of version name cannot be bigger than 99")
+    } else if (patch.toInteger() > 99) {
+        throw new GradleException("Patch part of version name cannot be bigger than 99")
+    }
+    return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
+}
+
+ext.getBuildNumber = {
+    def final build
+
+    try {
+        def final buildStr = 'git rev-list --count HEAD'.execute().text.trim()
+        build = buildStr.toInteger()
+    } catch (Exception ignored) {
+        System.err.println 'Build number is not available'
+        build = 1
     }
 
-    def (major, minor, patch) = version.tokenize('.')
-    def code = major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()
-    def name = build ? "${version}-b${build}" : version
+    if (build >= 10000) {
+        throw new GradleException(
+                "Build number ($build) exceeded 10000, version code should be adjusted to fit it")
+    }
 
-    config.versionCode code
-    config.versionName name
-
-    println "-------- VERSION --------\n" +
-            "-- CODE = ${code}\n" +
-            "-- NAME = ${name}\n" +
-            "-------------------------"
+    return build
 }
 
 /**
@@ -109,53 +131,21 @@ ext.setOutputFileName = { appName ->
 
 
 /**
- * Disabling pre-dexing to speed up build server
+ * Adds string field to the generated BuildConfig class.
+ *
+ * Can be called within defaultConfig, build type or flavor initialization closure:
+ * "setStringField it, 'NAME', 'VALUE'".
  */
-if (isOnBuildServer()) {
-    rootProject.allprojects { p ->
-        if (p.hasProperty('android') && p.android) {
-            p.android.dexOptions.preDexLibraries = false
-            println "Disabling pre dex for ${p.name}"
-        }
-    }
+ext.setStringField = { obj, key, value ->
+    obj.buildConfigField 'String', key, "\"${value}\""
 }
 
-/*
- * Creates build task 'ci' to use with Jenkins.
- * It expects MODE build parameter (provided with -DMODE=XXX by Jenkins) to be set to flavor name.
- * This task will assemble, check and upload debug build to Fabric for given flavor.
+/**
+ * Adds string resource to be accessible as R.string.key.
+ *
+ * Can be called within defaultConfig, build type or flavor initialization closure:
+ * "setStringRes it, 'name', 'value'".
  */
-project.afterEvaluate {
-    String mode = System.properties.MODE
-    String modeName = mode ? mode.toLowerCase().capitalize() : ''
-    modeName = modeName.replaceAll(/_\w/) { it[1].toUpperCase() } // Underscores to camel case
-
-    final ci = 'ci'
-    final checks = "checks${modeName}"
-    final checkstyle = 'checkstyle'
-    final lint = "lint${modeName}Debug"
-    final unitTest = "test${modeName}DebugUnitTest"
-    final assemble = "assemble${modeName}Debug"
-    final upload = "crashlyticsUploadDistribution${modeName}Debug"
-
-    project.task ci
-    project.task checks
-
-    addTasksDep ci, assemble
-    addTasksDep ci, checks
-    addTasksDep ci, upload
-
-    addTasksDep checks, assemble
-    addTasksDep checks, checkstyle
-    addTasksDep checks, lint
-    addTasksDep checks, unitTest
-
-    addTasksDep upload, assemble
-    addTasksDep upload, checks
-}
-
-def void addTasksDep(String task, String taskTarget) {
-    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
-        project.tasks[task].dependsOn taskTarget
-    }
+ext.setStringRes = { obj, key, value ->
+    obj.resValue 'string', key, value
 }

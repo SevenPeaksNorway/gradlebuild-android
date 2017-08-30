@@ -1,0 +1,114 @@
+/*
+This script will automatically set up 'ci' task that can be used on build server along with MODE
+build parameter to trigger all necessary tasks.
+
+Usage example in build.gradle:
+apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
+ */
+
+
+/*
+ * Creates build task 'ci' to use with Jenkins.
+ *
+ * It expects MODE build parameter (provided with -DMODE=XXX by Jenkins) to provide flavor name.
+ * If MODE is not set or set to 'BUILD', 'ALL' or 'BUILD_ALL' then all debug flavors will be built.
+ * If MODE is set to 'PUBLISH' or 'PUBLISH_ALL' then all release flavors will be uploaded to Play.
+ * If MODE starts with 'PUBLISH_' (e.g. 'PUBLISH_PROD') then rest part will be consider as a release
+ * flavor name to be uploaded to Play.
+ * Otherwise MODE will be treated as a debug flavor name (with optional 'BUILD_' prefix).
+ *
+ * This task will assemble, check and either upload debug build(s) to Fabric or upload release
+ * build(s) to Play for given flavor(s).
+ */
+project.afterEvaluate {
+    final String mode = System.properties.MODE
+    def (boolean isPublish, String buildMode, List<String> flavors) = parseMode(mode)
+
+    final ci = 'ci'
+    project.task ci
+
+    flavors.each { String flavor ->
+        final fullName = flavor.capitalize() + buildMode.capitalize()
+
+        final assemble = "assemble${fullName}"
+        final checks = "checks${fullName}"
+        final checkstyle = 'checkstyle'
+        final lint = "lint${fullName}"
+        final unitTest = "test${fullName}UnitTest"
+        final upload = "crashlyticsUploadDistribution${fullName}"
+        final publish = "publishApk${fullName}"
+
+        project.task checks
+
+        addTasksDep ci, assemble
+        addTasksDep ci, checks
+
+        addTasksDep checks, assemble
+        addTasksDep checks, checkstyle
+        addTasksDep checks, lint
+        addTasksDep checks, unitTest
+
+        if (isPublish) {
+            // Uploading to Play
+            addTasksDep ci, publish
+        } else {
+            // Uploading to Fabric
+            addTasksDep ci, upload
+            addTasksDep upload, assemble
+            addTasksDep upload, checks
+        }
+    }
+}
+
+def parseMode(String mode) {
+    final boolean publish
+    final String singleFlavor
+    final boolean allFlavors
+
+    final String buildMode
+    final List<String> flavors
+
+    if (!mode || mode == 'BUILD' || mode == 'BUILD_ALL' || mode == 'ALL') {
+        publish = false
+        singleFlavor = null
+        allFlavors = true
+    } else if (mode.startsWith('BUILD_')) {
+        publish = false
+        singleFlavor = toCamelCase(mode.replace('BUILD_', ''))
+        allFlavors = false
+    } else if (mode == 'PUBLISH' || mode == 'PUBLISH_ALL') {
+        publish = true
+        singleFlavor = null
+        allFlavors = true
+    } else if (mode.startsWith('PUBLISH_')) {
+        publish = true
+        singleFlavor = toCamelCase(mode.replace('PUBLISH_', ''))
+        allFlavors = false
+    } else {
+        publish = false
+        singleFlavor = toCamelCase(mode)
+        allFlavors = false
+    }
+
+    buildMode = publish ? 'release' : 'debug'
+
+    if (allFlavors) {
+        flavors = project.android.applicationVariants
+                .findAll { it.buildType.name == buildMode }
+                .collect { it.flavorName }
+    } else {
+        flavors = Arrays.asList(singleFlavor)
+    }
+
+    return [publish, buildMode, flavors]
+}
+
+def static String toCamelCase(String snakeCase) {
+    return snakeCase.toLowerCase().replaceAll(/_\w/) { it[1].toUpperCase() }
+}
+
+def void addTasksDep(String task, String taskTarget) {
+    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
+        project.tasks[task].dependsOn taskTarget
+    }
+}
