@@ -29,4 +29,8 @@
         <ignore regexp=".*retrofit.*" />
     </issue>
 
+    <issue id="UnusedResources">
+        <ignore regexp="google_crash_reporting_api_key" />
+    </issue>
+
 </lint>
