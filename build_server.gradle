@@ -24,6 +24,8 @@ project.afterEvaluate {
     final String mode = System.properties.MODE
     def (boolean isPublish, String buildMode, List<String> flavors) = parseMode(mode)
 
+    println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}"
+
     final ci = 'ci'
     project.task ci
 

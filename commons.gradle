@@ -6,7 +6,8 @@ apply from: "${rootDir}/libraries/GradleBuild/commons.gradle"
 android {
     defaultConfig {
         ...
-        setupVersion it, '1.0.0'
+        setupVersion '1.0.0'
+        setOutputFileName 'app-name'
     }
     ...
     productFlavors {
@@ -15,8 +16,6 @@ android {
             setStringRes it, 'flurry_key', 'abcdefghijklmnoprst'
         }
     }
-    ...
-    setOutputFileName 'app-name'
 }
  */
 
@@ -41,33 +40,27 @@ ext.isOnBuildServer = {
  * Should be called instead of 'versionName' / 'versionCode' within defaultConfig closure:
  * "setupVersion it, 'X.Y.Z'".
  */
-ext.setupVersion = { config, version ->
+ext.setupVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
-    config.versionCode baseCode
-    config.versionName version
+    android.defaultConfig.versionCode baseCode
+    android.defaultConfig.versionName version
 
-    println "------ BASE VERSION -----\n" +
-            "-- NAME = ${version}\n" +
-            "-- CODE = ${baseCode}\n" +
-            "-------------------------"
+    println "VARSION: BASE NAME = ${version}\n" +
+            "VARSION: BASE CODE = ${baseCode}"
 
     // We also need to fine-tune version name and code for different cases
-    project.afterEvaluate {
-        println "---- FLAVOR VERSIONS ----"
-        android.applicationVariants.all { variant ->
-            if (variant.buildType.name == 'release') {
-                // Build number should be included to all release version codes,
-                // since each upload to Google Play should have increased version code.
-                variant.mergedFlavor.versionCode = baseCode + buildNumber
-                println "-- CODE / ${variant.name}: ${variant.mergedFlavor.versionCode}"
-            } else if (isOnBuildServer()) {
-                variant.mergedFlavor.versionName = "${version}-b${buildNumber}"
-                println "-- NAME / ${variant.name}: ${variant.mergedFlavor.versionName}"
-            }
+    android.applicationVariants.whenObjectAdded { variant ->
+        if (variant.buildType.name == 'release') {
+            // Build number should be included into all release version codes,
+            // since each upload to Google Play should have increased version code.
+            variant.mergedFlavor.versionCode = baseCode + buildNumber
+            println "VERSION: ${variant.name} CODE = ${variant.mergedFlavor.versionCode}"
+        } else if (isOnBuildServer()) {
+            variant.mergedFlavor.versionName = "${version}-b${buildNumber}"
+            println "VERSION: ${variant.name} NAME = ${variant.mergedFlavor.versionName}"
         }
-        println "-------------------------"
     }
 }
 
@@ -108,13 +101,14 @@ ext.getBuildNumber = {
 /**
  * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
  *
- * Should be called within android setup, closer to the end: "setOutputFileName 'appName'".
+ * Should be called after call to `setupVersion`, e.g.:
+ *   setOutputFileName 'app-name'
  */
 ext.setOutputFileName = { appName ->
-    android.applicationVariants.all { variant ->
+    android.applicationVariants.whenObjectAdded { variant ->
         variant.outputs.each { output ->
-            String apkName = "${appName}-${output.baseName}-${variant.versionName}"
-            String dir = output.outputFile.parent
+            final String apkName = "${appName}-${output.baseName}-${variant.versionName}"
+            final String dir = output.outputFile.parent
 
             if (output.packageApplication) {
                 if (output.zipAlign) {

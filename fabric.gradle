@@ -179,7 +179,7 @@ def String getChangeLog() {
     final String commit = getGitCommit()
     final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
 
-    println "GIT_COMMIT: ${commit} / GIT_PREVIOUS_COMMIT: ${prevCommit}"
+    println "FABRIC: Generating change log from '${commit}' to '${prevCommit}'"
 
     if (commit && prevCommit) {
         return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
@@ -195,11 +195,11 @@ def String getChangeLogFromCommand(String command) {
     def proc = ["bash", "-c", command].execute()
     proc.waitFor()
     if (proc.exitValue() != 0) {
-        println "Error: ${proc.err.text}"
+        println "FABRIC: Error ${proc.err.text}"
     } else {
         def log = proc.text
 
-        println "---- FABRIC LOG ----\n" +
+        println "------- FABRIC LOG ------\n" +
                 "${log}\n" +
                 "-------------------------\n"
 
@@ -219,7 +219,7 @@ def Properties getVcsProperties() {
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
     } catch (Exception ignored) {
-        println 'No previous vcs properties found'
+        println 'FABRIC: No previous git properties detected'
     }
     return props
 }
