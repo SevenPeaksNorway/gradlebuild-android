@@ -4,6 +4,10 @@
 //     apply from: "${rootDir}/libraries/GradleBuild/play_store_buildscript.gradle", to: buildscript
 // }
 
+repositories {
+    jcenter()
+}
+
 dependencies {
     classpath 'com.github.triplet.gradle:play-publisher:1.2.0'
 }

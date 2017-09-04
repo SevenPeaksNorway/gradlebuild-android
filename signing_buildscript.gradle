@@ -4,6 +4,10 @@
 //     apply from: "${rootDir}/libraries/GradleBuild/signing_buildscript.gradle", to: buildscript
 // }
 
+repositories {
+    jcenter()
+}
+
 dependencies {
     classpath 'com.alexvasilkov:android-sign-release:0.8.1'
 }
