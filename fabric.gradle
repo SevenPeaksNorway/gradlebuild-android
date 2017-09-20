@@ -87,6 +87,7 @@ ext.setFabricKeys = { flavor, key, secret ->
 
 ext.setFabricGroup = { flavor, group ->
     flavor.ext.betaDistributionGroupAliases = group
+    flavor.ext.betaDistributionNotifications = false // To not spam testers
 }
 
 /**
