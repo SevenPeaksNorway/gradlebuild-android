@@ -107,17 +107,12 @@ ext.getBuildNumber = {
 ext.setOutputFileName = { appName ->
     android.applicationVariants.whenObjectAdded { variant ->
         variant.outputs.each { output ->
-            final String apkName = "${appName}-${output.baseName}-${variant.versionName}"
-            final String dir = output.outputFile.parent
+            String apkName = "${appName}-${output.baseName}-${variant.versionName}.apk"
 
-            if (output.packageApplication) {
-                if (output.zipAlign) {
-                    output.packageApplication.outputFile = new File(dir, "${apkName}.unaligned_apk")
-                    output.zipAlign.inputFile = output.packageApplication.outputFile
-                    output.zipAlign.outputFile = new File(dir, "${apkName}.apk")
-                } else {
-                    output.packageApplication.outputFile = new File(dir, "${apkName}.apk")
-                }
+            if (output.hasProperty('outputFileName')) {
+                output.outputFileName = apkName
+            } else {
+                output.packageApplication.outputFile = new File(output.outputFile.parent, apkName)
             }
         }
     }
