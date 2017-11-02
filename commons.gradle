@@ -47,20 +47,59 @@ ext.setupVersion = { version ->
     android.defaultConfig.versionCode baseCode
     android.defaultConfig.versionName version
 
-    println "VARSION: BASE NAME = ${version}\n" +
-            "VARSION: BASE CODE = ${baseCode}"
+    println "VERSION: BASE NAME = ${version}\n" +
+            "VERSION: BASE CODE = ${baseCode}\n" +
+            "VERSION: BUILD = ${buildNumber}"
 
     // We also need to fine-tune version name and code for different cases
     android.applicationVariants.whenObjectAdded { variant ->
+        Integer versionCode = null
+        String versionName = null
+
+        // Build number should be included into all release version codes, since each upload to
+        // Google Play should have increased version code, but for debug builds it is better
+        // to keep single code within same version to simplify updates to earlier versions.
+
+        // When building on build server (and distributing with Fabric) it is important to include
+        // build number in version name to make it easier for testers to provide exact build number
+
         if (variant.buildType.name == 'release') {
-            // Build number should be included into all release version codes,
-            // since each upload to Google Play should have increased version code.
-            variant.mergedFlavor.versionCode = baseCode + buildNumber
-            println "VERSION: ${variant.name} CODE = ${variant.mergedFlavor.versionCode}"
+
+            versionCode = baseCode + buildNumber
+            variant.mergedFlavor.versionCode = versionCode
+            println "VERSION: ${variant.name} CODE = ${versionCode}"
+
         } else if (isOnBuildServer()) {
-            variant.mergedFlavor.versionName = "${version}-b${buildNumber}"
-            println "VERSION: ${variant.name} NAME = ${variant.mergedFlavor.versionName}"
+
+            versionName = "${version}-b${buildNumber}"
+            variant.mergedFlavor.versionName = versionName
+            println "VERSION: ${variant.name} NAME = ${versionName}"
+
         }
+
+        // Now we should also update final manifests, since they will not included new name and code
+        variant.outputs.each { output -> updateManifestVersion(output, versionCode, versionName) }
+    }
+}
+
+private void updateManifestVersion(output, Integer code, String name) {
+    if (code == null && name == null) {
+        return
+    }
+
+    output.processManifest.doLast {
+        String manifestPath = "${manifestOutputDirectory}/AndroidManifest.xml"
+        String manifest = file(manifestPath).getText()
+        // Changing the version code and name
+        if (code != null) {
+            manifest = manifest.replaceFirst(
+                    'android:versionCode="\\d+"', "android:versionCode=\"${code}\"")
+        }
+        if (name != null) {
+            manifest = manifest.replaceFirst(
+                    'android:versionName="[\\d.]+"', "android:versionName=\"${name}\"")
+        }
+        file(manifestPath).write(manifest)
     }
 }
 
