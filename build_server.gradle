@@ -50,14 +50,15 @@ project.afterEvaluate {
         addTasksDep checks, lint
         addTasksDep checks, unitTest
 
-        if (isPublish) {
-            // Uploading to Play
-            addTasksDep ci, publish
-        } else {
-            // Uploading to Fabric
-            addTasksDep ci, upload
-            addTasksDep upload, assemble
-            addTasksDep upload, checks
+        if (isMasterBranch()) { // Only distributing from master branch
+            if (isPublish) {
+                // Uploading to Play
+                addTasksDep ci, publish
+            } else {
+                // Uploading to Fabric
+                addTasksDep ci, upload
+                addTasksDep upload, checks
+            }
         }
     }
 }
@@ -105,12 +106,22 @@ def parseMode(String mode) {
     return [publish, buildMode, flavors]
 }
 
-def static String toCamelCase(String snakeCase) {
+void addTasksDep(String task, String taskTarget) {
+    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
+        project.tasks[task].dependsOn taskTarget
+    }
+}
+
+static String toCamelCase(String snakeCase) {
     return snakeCase.toLowerCase().replaceAll(/_\w/) { it[1].toUpperCase() }
 }
 
-def void addTasksDep(String task, String taskTarget) {
-    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
-        project.tasks[task].dependsOn taskTarget
+static boolean isMasterBranch() {
+    try {
+        def final branch = 'git rev-parse --abbrev-ref HEAD'.execute().text.trim()
+        return branch == 'master'
+    } catch (Exception ignored) {
+        System.err.println 'Current branch is not available'
+        return false
     }
 }

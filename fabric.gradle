@@ -42,15 +42,15 @@ repositories {
 }
 
 dependencies {
-    compile 'com.crashlytics.sdk.android:crashlytics:2.6.6'
+    implementation 'com.crashlytics.sdk.android:crashlytics:2.9.1'
 }
 
 apply plugin: 'io.fabric'
 
-def final Map fabricKeys = new HashMap();
-def final Map fabricSecrets = new HashMap();
-def final Map fabricSkips = new HashMap();
-def String changelogCached;
+final Map fabricKeys = new HashMap()
+final Map fabricSecrets = new HashMap()
+final Map fabricSkips = new HashMap()
+String changelogCached
 
 /**
  * Sets up Fabric key and secret for each flavor, since Fabric does not support
@@ -165,7 +165,7 @@ project.afterEvaluate {
 /**
  * Saves last git commit / vcs revision to be used next time to generate Fabric change log.
  */
-def void updateVcsProperties() {
+void updateVcsProperties() {
     Properties props = getVcsProperties()
     if (getGitCommit()) {
         props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
@@ -176,7 +176,7 @@ def void updateVcsProperties() {
 /**
  * Generates and sets Fabric change log from git commits comments since last upload.
  */
-def String getChangeLog() {
+String getChangeLog() {
     final String commit = getGitCommit()
     final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
 
@@ -192,7 +192,7 @@ def String getChangeLog() {
 /**
  * Generates and sets Fabric change log by executing provided bash command.
  */
-def String getChangeLogFromCommand(String command) {
+String getChangeLogFromCommand(String command) {
     def proc = ["bash", "-c", command].execute()
     proc.waitFor()
     if (proc.exitValue() != 0) {
@@ -211,11 +211,11 @@ def String getChangeLogFromCommand(String command) {
 /**
  * Returns current git revision, only works when building with Jenkins.
  */
-static def String getGitCommit() {
+static String getGitCommit() {
     return System.getenv('GIT_COMMIT')
 }
 
-def Properties getVcsProperties() {
+Properties getVcsProperties() {
     final Properties props = new Properties()
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
@@ -225,11 +225,11 @@ def Properties getVcsProperties() {
     return props
 }
 
-def void saveVcsProperties(Properties props) {
+void saveVcsProperties(Properties props) {
     props.store(new FileWriter(getVcsPropsFileName()), '')
 }
 
-def String getVcsPropsFileName() {
+String getVcsPropsFileName() {
     String mode = System.properties.MODE
     String modeName = mode ? mode.toLowerCase() : ''
     return "${rootDir.absolutePath}/../vcs_${modeName}.properties"
