@@ -62,10 +62,10 @@ task checkstyle(type: Checkstyle) {
     classpath = files()
     reports {
         html {
-            destination "${REPORTS_DIR}/checkstyle/checkstyle-result.html"
+            destination file("${REPORTS_DIR}/checkstyle/checkstyle-result.html")
         }
         xml {
-            destination "${REPORTS_DIR}/checkstyle/checkstyle-result.xml"
+            destination file("${REPORTS_DIR}/checkstyle/checkstyle-result.xml")
         }
     }
     ignoreFailures = true // Errors report will be generated and shown by Jenkins
