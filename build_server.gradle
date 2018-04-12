@@ -23,8 +23,10 @@ apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
 project.afterEvaluate {
     final String mode = System.properties.MODE
     def (boolean isPublish, String buildMode, List<String> flavors) = parseMode(mode)
+    final boolean isOnMaster = isMasterBranch()
 
     println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}"
+    println "BUILDING ON master: ${isOnMaster}"
 
     final ci = 'ci'
     project.task ci
@@ -50,7 +52,7 @@ project.afterEvaluate {
         addTasksDep checks, lint
         addTasksDep checks, unitTest
 
-        if (isMasterBranch()) { // Only distributing from master branch
+        if (isOnMaster) { // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
                 addTasksDep ci, publish
@@ -118,7 +120,8 @@ static String toCamelCase(String snakeCase) {
 
 static boolean isMasterBranch() {
     try {
-        def final branch = 'git rev-parse --abbrev-ref HEAD'.execute().text.trim()
+        def commit = 'git rev-parse HEAD'.execute().text.trim()
+        def final branch = "git branch --contains ${commit} | grep master".execute().text.trim()
         return branch == 'master'
     } catch (Exception ignored) {
         System.err.println 'Current branch is not available'
