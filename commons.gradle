@@ -20,6 +20,8 @@ android {
  */
 
 
+String appName = 'app'
+
 /**
  * Whether we are running on build server currently or not.
  */
@@ -44,18 +46,18 @@ ext.setupVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
-    android.defaultConfig.versionCode baseCode
-    android.defaultConfig.versionName version
+    println "VERSION: BASE NAME = ${version}"
+    println "VERSION: BASE CODE = ${baseCode}"
+    println "VERSION: BUILD = ${buildNumber}"
 
-    println "VERSION: BASE NAME = ${version}\n" +
-            "VERSION: BASE CODE = ${baseCode}\n" +
-            "VERSION: BUILD = ${buildNumber}"
+    android.defaultConfig.with {
+        versionCode baseCode
+        versionName version
+        buildConfigField 'int', 'BUILD_NUMBER', "${buildNumber}"
+    }
 
     // We also need to fine-tune version name and code for different cases
     android.applicationVariants.whenObjectAdded { variant ->
-        Integer versionCode = null
-        String versionName = null
-
         // Build number should be included into all release version codes, since each upload to
         // Google Play should have increased version code, but for debug builds it is better
         // to keep single code within same version to simplify updates to earlier versions.
@@ -63,43 +65,26 @@ ext.setupVersion = { version ->
         // When building on build server (and distributing with Fabric) it is important to include
         // build number in version name to make it easier for testers to provide exact build number
 
+        Integer versionCode = baseCode
+        String versionName = version
+
         if (variant.buildType.name == 'release') {
-
             versionCode = baseCode + buildNumber
-            variant.mergedFlavor.versionCode = versionCode
-            println "VERSION: ${variant.name} CODE = ${versionCode}"
-
+            println "VERSION CODE ${variant.name} = ${versionCode}"
         } else if (isOnBuildServer()) {
-
             versionName = "${version}-b${buildNumber}"
-            variant.mergedFlavor.versionName = versionName
-            println "VERSION: ${variant.name} NAME = ${versionName}"
-
+            println "VERSION NAME ${variant.name} = ${versionName}"
         }
 
-        // Now we should also update final manifests, since they will not included new name and code
-        variant.outputs.each { output -> updateManifestVersion(output, versionCode, versionName) }
-    }
-}
-
-private void updateManifestVersion(output, Integer code, String name) {
-    if (code == null && name == null) {
-        return
-    }
-
-    output.processManifest.doLast {
-        String manifestPath = "${manifestOutputDirectory}/AndroidManifest.xml"
-        String manifest = file(manifestPath).getText()
-        // Changing the version code and name
-        if (code != null) {
-            manifest = manifest.replaceFirst(
-                    'android:versionCode="\\d+"', "android:versionCode=\"${code}\"")
+        // Rewriting version name and code for each output and setting apk file name
+        variant.outputs.each { output ->
+            output.versionCodeOverride = versionCode
+            output.versionNameOverride = versionName
+            output.outputFileName = "${appName}-${output.baseName}-${versionName}.apk"
         }
-        if (name != null) {
-            manifest = manifest.replaceFirst(
-                    'android:versionName="[\\d.]+"', "android:versionName=\"${name}\"")
-        }
-        file(manifestPath).write(manifest)
+
+        // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
+        variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"${versionName}\""
     }
 }
 
@@ -143,18 +128,8 @@ ext.getBuildNumber = {
  * Should be called after call to `setupVersion`, e.g.:
  *   setOutputFileName 'app-name'
  */
-ext.setOutputFileName = { appName ->
-    android.applicationVariants.whenObjectAdded { variant ->
-        variant.outputs.each { output ->
-            String apkName = "${appName}-${output.baseName}-${variant.versionName}.apk"
-
-            if (output.hasProperty('outputFileName')) {
-                output.outputFileName = apkName
-            } else {
-                output.packageApplication.outputFile = new File(output.outputFile.parent, apkName)
-            }
-        }
-    }
+ext.setOutputFileName = { name ->
+    appName = name
 }
 
 
