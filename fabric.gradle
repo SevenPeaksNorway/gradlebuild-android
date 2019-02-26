@@ -42,7 +42,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.crashlytics.sdk.android:crashlytics:2.9.5'
+    implementation 'com.crashlytics.sdk.android:crashlytics:2.9.9'
 }
 
 apply plugin: 'io.fabric'
