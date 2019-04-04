@@ -36,13 +36,8 @@ project.afterEvaluate {
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
 
-        final assemble = "assemble${fullName}"
         final checks = "checks${fullName}"
-        final checkstyle = 'checkstyle'
-        final lint = "lint${fullName}"
-        final unitTest = "test${fullName}UnitTest"
-        final upload = "crashlyticsUploadDistribution${fullName}"
-        final publish = "publishApk${fullName}"
+        final assemble = "assemble${fullName}"
 
         project.task checks
 
@@ -50,18 +45,17 @@ project.afterEvaluate {
         addTasksDep ci, checks
 
         addTasksDep checks, assemble
-        addTasksDep checks, checkstyle
-        addTasksDep checks, lint
-        addTasksDep checks, unitTest
+        addTasksDep checks, 'checkstyle'
+        addTasksDep checks, "lint${fullName}"
+        addTasksDep checks, "test${fullName}UnitTest"
 
         if (isOnMaster) { // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
-                addTasksDep ci, publish
+                addTasksDep ci, "publishApk${fullName}"
             } else {
                 // Uploading to Fabric
-                addTasksDep ci, upload
-                addTasksDep upload, checks
+                addTasksDep ci, "crashlyticsUploadDistribution${fullName}"
             }
         }
     }
@@ -111,8 +105,19 @@ def parseMode(String mode) {
 }
 
 void addTasksDep(String task, String taskTarget) {
-    if (project.tasks.asMap.containsKey(task) && project.tasks.asMap.containsKey(taskTarget)) {
-        project.tasks[task].dependsOn taskTarget
+    if (!project.tasks.asMap.containsKey(task)) return
+
+    // Starting from v4.9 Gradle uses lazy tasks initialization
+    final useLazyTasks = GradleVersion.current() >= GradleVersion.version('4.9')
+
+    try {
+        if (useLazyTasks) {
+            project.tasks[task].dependsOn project.tasks.named(taskTarget)
+        } else {
+            project.tasks[task].dependsOn taskTarget
+        }
+    } catch(Exception ignored){
+        println "Cannot add dependency from ${task} to ${taskTarget}"
     }
 }
 
