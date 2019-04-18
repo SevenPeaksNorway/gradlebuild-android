@@ -6,6 +6,7 @@ Usage example in build.gradle:
 apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
  */
 
+import org.gradle.util.GradleVersion
 
 /*
  * Creates build task 'ci' to use with Jenkins.
@@ -49,7 +50,8 @@ project.afterEvaluate {
         addTasksDep checks, "lint${fullName}"
         addTasksDep checks, "test${fullName}UnitTest"
 
-        if (isOnMaster) { // Only distributing from master branch
+        if (isOnMaster) {
+            // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
                 addTasksDep ci, "publishApk${fullName}"
@@ -65,9 +67,6 @@ def parseMode(String mode) {
     final boolean publish
     final String singleFlavor
     final boolean allFlavors
-
-    final String buildMode
-    final List<String> flavors
 
     if (!mode || mode == 'BUILD' || mode == 'BUILD_ALL' || mode == 'ALL') {
         publish = false
@@ -91,7 +90,8 @@ def parseMode(String mode) {
         allFlavors = false
     }
 
-    buildMode = publish ? 'release' : 'debug'
+    final String buildMode = publish ? 'release' : 'debug'
+    List<String> flavors
 
     if (allFlavors) {
         flavors = project.android.applicationVariants
@@ -116,7 +116,7 @@ void addTasksDep(String task, String taskTarget) {
         } else {
             project.tasks[task].dependsOn taskTarget
         }
-    } catch(Exception ignored){
+    } catch (Exception ignored) {
         println "Cannot add dependency from ${task} to ${taskTarget}"
     }
 }
