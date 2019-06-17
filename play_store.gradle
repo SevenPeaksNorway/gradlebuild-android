@@ -70,6 +70,7 @@ android {
     }
 }
 
-project.play {
+play {
     serviceAccountCredentials = file('play_account.json')
+    track = 'alpha'
 }
