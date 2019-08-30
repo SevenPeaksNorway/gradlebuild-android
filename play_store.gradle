@@ -39,12 +39,8 @@ android {
 
 If you need to provide different Play account credentials then use:
 
-android {
-    playAccountConfigs {
-        config {
-            jsonFile = file('[path/to/account/creds/json]')
-        }
-    }
+play {
+    serviceAccountCredentials = file('play_account.json')
 }
 
  */
@@ -52,16 +48,6 @@ android {
 apply plugin: 'com.github.triplet.play'
 
 android {
-    playAccountConfigs {
-        config {
-            jsonFile = file('play_account.json')
-        }
-    }
-
-    defaultConfig {
-        playAccountConfig = playAccountConfigs.config
-    }
-
     signingConfigs {
         debug {
             storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
@@ -82,4 +68,9 @@ android {
             signingConfig signingConfigs.release
         }
     }
+}
+
+play {
+    serviceAccountCredentials = file('play_account.json')
+    track = 'alpha'
 }
