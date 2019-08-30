@@ -62,7 +62,7 @@ def parseMode(String mode) {
     if (!mode || mode == 'BUILD') {
         mode = 'ALL'
     } else if (mode.startsWith('BUILD_')) {
-        mode = mode.replace('BUNDLE_', '')
+        mode = mode.replace('BUILD_', '')
     } else if (mode == 'PUBLISH') {
         mode = 'ALL'
         publish = true
