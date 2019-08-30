@@ -27,34 +27,25 @@ project.afterEvaluate {
     println "BUILD on master: ${isOnMaster}"
 
     final String mode = System.properties.MODE
-    def (boolean isPublish, String buildMode, List<String> flavors) = parseMode(mode)
+    def (boolean isPublish, boolean isBundle, String buildMode, List<String> flavors) = parseMode(mode)
 
-    println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}"
+    println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}, publish = ${isPublish}, bundle = ${isBundle}"
 
     final ci = 'ci'
     project.task ci
+    addTasksDep ci, 'checkstyle'
 
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
 
-        final checks = "checks${fullName}"
-        final assemble = "assemble${fullName}"
+        addTasksDep ci, "lint${fullName}"
+        addTasksDep ci, "test${fullName}UnitTest"
+        addTasksDep ci, isBundle ? "bundle${fullName}" : "assemble${fullName}"
 
-        project.task checks
-
-        addTasksDep ci, assemble
-        addTasksDep ci, checks
-
-        addTasksDep checks, assemble
-        addTasksDep checks, 'checkstyle'
-        addTasksDep checks, "lint${fullName}"
-        addTasksDep checks, "test${fullName}UnitTest"
-
-        if (isOnMaster) {
-            // Only distributing from master branch
+        if (isOnMaster) { // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
-                addTasksDep ci, "publishApk${fullName}"
+                addTasksDep ci, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}"
             } else {
                 // Uploading to Fabric
                 addTasksDep ci, "crashlyticsUploadDistribution${fullName}"
@@ -64,44 +55,46 @@ project.afterEvaluate {
 }
 
 def parseMode(String mode) {
-    final boolean publish
-    final String singleFlavor
-    final boolean allFlavors
+    boolean publish = false
+    boolean bundle = false
+    String singleFlavor = null
 
-    if (!mode || mode == 'BUILD' || mode == 'BUILD_ALL' || mode == 'ALL') {
-        publish = false
-        singleFlavor = null
-        allFlavors = true
+    if (!mode || mode == 'BUILD') {
+        mode = 'ALL'
     } else if (mode.startsWith('BUILD_')) {
-        publish = false
-        singleFlavor = toCamelCase(mode.replace('BUILD_', ''))
-        allFlavors = false
-    } else if (mode == 'PUBLISH' || mode == 'PUBLISH_ALL') {
+        mode = mode.replace('BUNDLE_', '')
+    } else if (mode == 'PUBLISH') {
+        mode = 'ALL'
         publish = true
-        singleFlavor = null
-        allFlavors = true
     } else if (mode.startsWith('PUBLISH_')) {
+        mode = mode.replace('PUBLISH_', '')
         publish = true
-        singleFlavor = toCamelCase(mode.replace('PUBLISH_', ''))
-        allFlavors = false
-    } else {
-        publish = false
+    }
+
+    if (mode == 'BUNDLE') {
+        mode = 'ALL'
+        bundle = true
+    } else if (mode.startsWith('BUNDLE_')) {
+        mode = mode.replace('BUNDLE_', '')
+        bundle = true
+    }
+
+    if (mode != 'ALL') {
         singleFlavor = toCamelCase(mode)
-        allFlavors = false
     }
 
     final String buildMode = publish ? 'release' : 'debug'
-    List<String> flavors
+    final List<String> flavors
 
-    if (allFlavors) {
+    if (singleFlavor) {
+        flavors = Arrays.asList(singleFlavor)
+    } else {
         flavors = project.android.applicationVariants
                 .findAll { it.buildType.name == buildMode }
                 .collect { it.flavorName }
-    } else {
-        flavors = Arrays.asList(singleFlavor)
     }
 
-    return [publish, buildMode, flavors]
+    return [publish, bundle, buildMode, flavors]
 }
 
 void addTasksDep(String task, String taskTarget) {
