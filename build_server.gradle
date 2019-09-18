@@ -48,6 +48,7 @@ project.afterEvaluate {
                 addTasksDep ci, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}"
             } else {
                 // Uploading to Fabric
+                addTasksDep "crashlyticsUploadDistribution${fullName}", "assemble${fullName}"
                 addTasksDep ci, "crashlyticsUploadDistribution${fullName}"
             }
         }
