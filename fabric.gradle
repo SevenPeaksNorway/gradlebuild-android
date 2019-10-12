@@ -1,4 +1,6 @@
 /*
+*** DEPRECATED ***
+
 Usage example:
 
 In build.gradle:
@@ -45,12 +47,13 @@ dependencies {
     implementation 'com.crashlytics.sdk.android:crashlytics:2.10.1'
 }
 
+apply from: "${rootDir}/libraries/GradleBuild/changelog.gradle"
+
 apply plugin: 'io.fabric'
 
 final Map fabricKeys = new HashMap()
 final Map fabricSecrets = new HashMap()
 final Map fabricSkips = new HashMap()
-String changelogCached
 
 /**
  * Sets up Fabric key and secret for each flavor, since Fabric does not support
@@ -78,11 +81,7 @@ ext.setFabricKeys = { flavor, key, secret ->
     flavor.manifestPlaceholders = [fabricApiKey: key ?: '']
     flavor.buildConfigField 'boolean', 'FABRIC_ENABLED', key ? 'true' : 'false'
 
-    if (!changelogCached) {
-        changelogCached = getChangeLog()
-    }
-
-    flavor.ext.betaDistributionReleaseNotes = changelogCached
+    flavor.ext.betaDistributionReleaseNotes = getChangelog()
 }
 
 ext.setFabricGroup = { flavor, group ->
@@ -142,7 +141,7 @@ project.afterEvaluate {
                 upload.dependsOn genTask
                 upload.doLast {
                     propFile.delete()
-                    updateVcsProperties()
+                    onChangelogUploaded()
                 }
 
                 variantReady = true
@@ -160,77 +159,4 @@ project.afterEvaluate {
             }
         }
     }
-}
-
-/**
- * Saves last git commit / vcs revision to be used next time to generate Fabric change log.
- */
-void updateVcsProperties() {
-    Properties props = getVcsProperties()
-    if (getGitCommit()) {
-        props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
-        saveVcsProperties(props)
-    }
-}
-
-/**
- * Generates and sets Fabric change log from git commits comments since last upload.
- */
-String getChangeLog() {
-    final String commit = getGitCommit()
-    final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
-
-    println "FABRIC: Generating change log from '${commit}' to '${prevCommit}'"
-
-    if (commit && prevCommit) {
-        return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
-                " | grep -ivE \"^Merged.*\$|/logoff\$\"")
-    }
-    return null
-}
-
-/**
- * Generates and sets Fabric change log by executing provided bash command.
- */
-String getChangeLogFromCommand(String command) {
-    def proc = ["bash", "-c", command].execute()
-    proc.waitFor()
-    if (proc.exitValue() != 0) {
-        println "FABRIC: Error ${proc.err.text}"
-    } else {
-        def log = proc.text
-
-        println "------- FABRIC LOG ------\n" +
-                "${log}\n" +
-                "-------------------------\n"
-
-        return log
-    }
-}
-
-/**
- * Returns current git revision, only works when building with Jenkins.
- */
-static String getGitCommit() {
-    return System.getenv('GIT_COMMIT')
-}
-
-Properties getVcsProperties() {
-    final Properties props = new Properties()
-    try {
-        props.load(new FileInputStream(getVcsPropsFileName()))
-    } catch (Exception ignored) {
-        println 'FABRIC: No previous git properties detected'
-    }
-    return props
-}
-
-void saveVcsProperties(Properties props) {
-    props.store(new FileWriter(getVcsPropsFileName()), '')
-}
-
-String getVcsPropsFileName() {
-    String mode = System.properties.MODE
-    String modeName = mode ? mode.toLowerCase() : ''
-    return "${rootDir.absolutePath}/../vcs_${modeName}.properties"
 }

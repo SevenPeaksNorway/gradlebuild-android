@@ -1,4 +1,7 @@
 /*
+*** DEPRECATED ***
+Just use "common" script and set up play distribution manually in main build file.
+
 In order to upload release builds directly to Play you'll need to set up "App Sign" feature
 in Play console. Once ready upload keystore along with its password should be set up in script.
 Note, that password for 'upload' keystore is not a big secret. Upload keystore is only used

@@ -13,20 +13,47 @@ android {
     productFlavors {
         dev {
             setStringField it, 'SERVER_URL', 'http://example.com'
-            setStringRes it, 'flurry_key', 'abcdefghijklmnoprst'
+            setBooleanField it, 'CRASH_REPORT_ENABLED', true
+            setStringRes it, 'secret_key', 'abcdefghijklmnoprst'
         }
     }
 }
  */
 
+android {
+    // Setting up default signing config
+    signingConfigs {
+        debug {
+            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+        }
+        release {
+            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+            keyAlias 'androiddebugkey'
+            storePassword 'debug'
+            keyPassword 'debug'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+}
 
 String appName = 'app'
 
 /**
- * Whether we are running on build server currently or not.
+ * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
+ *
+ * Should be called after call to `setupVersion`, e.g.:
+ *   setOutputFileName 'app-name'
  */
-ext.isOnBuildServer = {
-    return System.getenv('BUILD_NUMBER')
+ext.setOutputFileName = { name ->
+    appName = name
 }
 
 /**
@@ -88,7 +115,7 @@ ext.setupVersion = { version ->
     }
 }
 
-ext.getBaseVersionCode = { version ->
+private static int getBaseVersionCode(String version) {
     // Version code has next format: XYYZZBBBB,
     // where X is a major version, Y is minor, Z is patch and B is build number (optional).
     // Since version code is an integer we are limited with 21.47.48.3647 (max int).
@@ -103,7 +130,7 @@ ext.getBaseVersionCode = { version ->
     return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
 }
 
-ext.getBuildNumber = {
+private static int getBuildNumber() {
     def build
 
     try {
@@ -111,7 +138,7 @@ ext.getBuildNumber = {
         build = buildStr.toInteger()
     } catch (Exception ignored) {
         System.err.println 'Build number is not available'
-        build = 1
+        return 1
     }
 
     if (build >= 10000) {
@@ -123,15 +150,11 @@ ext.getBuildNumber = {
 }
 
 /**
- * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
- *
- * Should be called after call to `setupVersion`, e.g.:
- *   setOutputFileName 'app-name'
+ * Whether we are running on build server currently or not.
  */
-ext.setOutputFileName = { name ->
-    appName = name
+ext.isOnBuildServer = {
+    return System.getenv('BUILD_NUMBER')
 }
-
 
 /**
  * Adds string field to the generated BuildConfig class.
@@ -141,6 +164,16 @@ ext.setOutputFileName = { name ->
  */
 ext.setStringField = { obj, key, value ->
     obj.buildConfigField 'String', key, "\"${value}\""
+}
+
+/**
+ * Adds boolean field to the generated BuildConfig class.
+ *
+ * Can be called within defaultConfig, build type or flavor initialization closure:
+ * "setBooleanField it, 'NAME', value".
+ */
+ext.setBooleanField = { obj, key, value ->
+    obj.buildConfigField 'Boolean', key, value ? "true" : "false"
 }
 
 /**

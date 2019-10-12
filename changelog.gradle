@@ -1,0 +1,71 @@
+String changelogCached
+
+/**
+ * Generates change log from git comments since last upload.
+ */
+ext.getChangelog = {
+    if (changelogCached == null) changelogCached = generateChangelogInternal()
+    return changelogCached
+}
+
+private String generateChangelogInternal() {
+    // Current git revision from Jenkins
+    final String commit = System.getenv('GIT_COMMIT')
+    // Previous git revision
+    final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
+
+    if (commit && prevCommit) {
+        println "CHANGELOG: Generating change log from '${commit}' to '${prevCommit}'"
+
+        return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
+                " | grep -ivE \"^Merged.*\$|/logoff\$\"")
+    }
+    return ""
+}
+
+/**
+ * Saves last git commit to be used next time to generate new change log.
+ */
+ext.onChangelogUploaded = {
+    Properties props = getVcsProperties()
+    if (System.getenv('GIT_COMMIT')) {
+        props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
+        props.store(new FileWriter(getVcsPropsFileName()), '')
+    }
+}
+
+/**
+ * Generates git change log by executing provided bash command.
+ */
+private String getChangeLogFromCommand(String command) {
+    def proc = ["bash", "-c", command].execute()
+    proc.waitFor()
+    if (proc.exitValue() != 0) {
+        println "CHANGELOG: Error ${proc.err.text}"
+        return ""
+    } else {
+        def log = proc.text
+
+        println "------- CHANGELOG ------\n" +
+                "${log}\n" +
+                "------------------------\n"
+
+        return log
+    }
+}
+
+private Properties getVcsProperties() {
+    final Properties props = new Properties()
+    try {
+        props.load(new FileInputStream(getVcsPropsFileName()))
+    } catch (Exception ignored) {
+        println 'CHANGELOG: No previous git properties detected'
+    }
+    return props
+}
+
+private String getVcsPropsFileName() {
+    String mode = System.properties.MODE
+    String modeName = mode ? mode.toLowerCase() : ''
+    return "${rootDir.absolutePath}/../vcs_${modeName}.properties"
+}

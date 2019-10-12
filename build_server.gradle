@@ -22,9 +22,11 @@ import org.gradle.util.GradleVersion
  * build(s) to Play for given flavor(s).
  */
 project.afterEvaluate {
-    final boolean isOnMaster = isMasterBranch()
+    final boolean isOnBuildServer = System.getenv('BUILD_NUMBER') ?: false
+    println "BUILD on build server: $isOnBuildServer"
 
-    println "BUILD on master: ${isOnMaster}"
+    final boolean isOnMaster = isMasterBranch()
+    println "BUILD on master: $isOnMaster"
 
     final String mode = System.properties.MODE
     def (boolean isPublish, boolean isBundle, String buildMode, List<String> flavors) = parseMode(mode)
@@ -47,7 +49,11 @@ project.afterEvaluate {
                 // Uploading to Play
                 addTasksDep ci, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}"
             } else {
-                // Uploading to Fabric
+                // Uploading to Firebase
+                addTasksDep "appDistributionUpload${fullName}", "assemble${fullName}"
+                addTasksDep ci, "appDistributionUpload${fullName}"
+
+                // Uploading to Fabric (old)
                 addTasksDep "crashlyticsUploadDistribution${fullName}", "assemble${fullName}"
                 addTasksDep ci, "crashlyticsUploadDistribution${fullName}"
             }
@@ -55,7 +61,7 @@ project.afterEvaluate {
     }
 }
 
-def parseMode(String mode) {
+private def parseMode(String mode) {
     boolean publish = false
     boolean bundle = false
     String singleFlavor = null
@@ -98,7 +104,7 @@ def parseMode(String mode) {
     return [publish, bundle, buildMode, flavors]
 }
 
-void addTasksDep(String task, String taskTarget) {
+private void addTasksDep(String task, String taskTarget) {
     if (!project.tasks.asMap.containsKey(task)) return
 
     // Starting from v4.9 Gradle uses lazy tasks initialization
@@ -115,11 +121,11 @@ void addTasksDep(String task, String taskTarget) {
     }
 }
 
-static String toCamelCase(String snakeCase) {
+private static String toCamelCase(String snakeCase) {
     return snakeCase.toLowerCase().replaceAll(/_\w/) { it[1].toUpperCase() }
 }
 
-static boolean isMasterBranch() {
+private static boolean isMasterBranch() {
     try {
         def commit = 'git rev-parse HEAD'.execute().text.trim()
         def final branch = "git branch -r --contains ${commit}".execute().text.trim()

@@ -1,3 +1,4 @@
+// *** DEPRECATED ***
 // Import this file inside buildscript section of your build.gradle like this:
 //
 // buildscript {
