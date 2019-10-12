@@ -6,8 +6,6 @@ Usage example in build.gradle:
 apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
  */
 
-import org.gradle.util.GradleVersion
-
 /*
  * Creates build task 'ci' to use with Jenkins.
  *
@@ -34,10 +32,9 @@ project.afterEvaluate {
     println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}, publish = ${isPublish}, bundle = ${isBundle}"
 
     final ci = 'ci'
-    final check= 'checkAll'
+    rootProject.task ci
 
-    project.task ci
-    addTasksDep ci, check
+    addTasksDep(rootProject, ci, rootProject, 'checkAll')
 
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
@@ -45,22 +42,23 @@ project.afterEvaluate {
         final assemble = "assemble${fullName}"
         final bundle = "bundle${fullName}"
 
-        addTasksDep ci, isBundle ? bundle : assemble
-        addTasksDep check, "lint${fullName}"
-        addTasksDep check, "test${fullName}UnitTest"
+        addTasksDep(rootProject, ci, project, isBundle ? bundle : assemble)
+        addTasksDep(rootProject, ci, rootProject, "lint${fullName}")
+        addTasksDep(rootProject, ci, rootProject, "test${fullName}UnitTest")
 
-        if (isOnMaster) { // Only distributing from master branch
+        if (isOnMaster) {
+            // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
-                addTasksDep ci, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}"
+                addTasksDep(rootProject, ci, project, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
             } else {
                 final fbUpload = "appDistributionUpload${fullName}"
                 final fbUploadTask = project.tasks.findByName(fbUpload)
 
-                if (fbUploadTask != null ) {
+                if (fbUploadTask != null) {
                     // Uploading to Firebase
-                    addTasksDep ci, fbUpload
-                    addTasksDep fbUpload, assemble
+                    addTasksDep(project, fbUpload, project, assemble)
+                    addTasksDep(rootProject, ci, project, fbUpload)
 
                     fbUploadTask.doLast {
                         // Notifying that changelog is uploaded, if needed
@@ -71,8 +69,8 @@ project.afterEvaluate {
                 } else {
                     // Uploading to Fabric (old)
                     final betaUpload = "crashlyticsUploadDistribution${fullName}"
-                    addTasksDep betaUpload, assemble
-                    addTasksDep ci, betaUpload
+                    addTasksDep(project, betaUpload, project, assemble)
+                    addTasksDep(rootProject, ci, project, betaUpload)
                 }
             }
         }
@@ -122,21 +120,32 @@ private def parseMode(String mode) {
     return [publish, bundle, buildMode, flavors]
 }
 
-private void addTasksDep(String task, String taskTarget) {
+private static void addTasksDep(
+        Project project, String task, Project projectTarget, String taskTarget) {
     if (!project.tasks.asMap.containsKey(task)) return
 
-    // Starting from v4.9 Gradle uses lazy tasks initialization
-    final useLazyTasks = GradleVersion.current() >= GradleVersion.version('4.9')
+    final tasks = findAll(projectTarget, taskTarget)
+    if (tasks.isEmpty()) {
+        println "Cannot add dependency from ${task} to ${taskTarget}"
+    } else {
+        tasks.forEach { it -> project.tasks[task].dependsOn it }
+    }
+}
+
+private static List<TaskProvider> findAll(Project root, String task) {
+    final list = new ArrayList()
 
     try {
-        if (useLazyTasks) {
-            project.tasks[task].dependsOn project.tasks.named(taskTarget)
-        } else {
-            project.tasks[task].dependsOn taskTarget
-        }
-    } catch (Exception ignored) {
-        println "Cannot add dependency from ${task} to ${taskTarget}"
+        list.add(root.tasks.named(task))
+    } catch (Exception ignored) {}
+
+    root.subprojects {
+        try {
+            list.add(project.tasks.named(task))
+        } catch (Exception ignored) {}
     }
+
+    return list
 }
 
 private static String toCamelCase(String snakeCase) {

@@ -24,7 +24,6 @@ def final REPORTS_DIR = 'build/reports'
 
 task 'checkAll'
 
-
 // Lint
 
 afterEvaluate {
