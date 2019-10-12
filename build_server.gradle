@@ -34,8 +34,10 @@ project.afterEvaluate {
     println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}, publish = ${isPublish}, bundle = ${isBundle}"
 
     final ci = 'ci'
+    final check= 'checkAll'
+
     project.task ci
-    addTasksDep ci, 'checkstyle'
+    addTasksDep ci, check
 
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
@@ -43,9 +45,9 @@ project.afterEvaluate {
         final assemble = "assemble${fullName}"
         final bundle = "bundle${fullName}"
 
-        addTasksDep ci, "lint${fullName}"
-        addTasksDep ci, "test${fullName}UnitTest"
         addTasksDep ci, isBundle ? bundle : assemble
+        addTasksDep check, "lint${fullName}"
+        addTasksDep check, "test${fullName}UnitTest"
 
         if (isOnMaster) { // Only distributing from master branch
             if (isPublish) {

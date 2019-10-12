@@ -1,0 +1,13 @@
+// Import this file inside buildscript section of *root* build.gradle like this:
+//
+// buildscript {
+//     apply from: "${rootDir}/libraries/GradleBuild/checks_buildscript.gradle", to: buildscript
+// }
+
+repositories {
+    maven { url = "https://plugins.gradle.org/m2/" }
+}
+
+dependencies {
+    classpath 'org.jlleitschuh.gradle:ktlint-gradle:9.0.0'
+}

@@ -1,7 +1,9 @@
 /*
-Usage example:
+Import this script in *root* build file:
 
-apply from: "${rootDir}/libraries/GradleBuild/checks.gradle"
+subprojects {
+    apply from: "${rootDir}/libraries/GradleBuild/checks.gradle"
+}
 
 Note, that you should use at least Gradle v2.11 (as set in gradle/gradle-wrapper.properties).
 
@@ -20,33 +22,43 @@ checkstyle {
 
 def final REPORTS_DIR = 'build/reports'
 
-apply plugin: 'checkstyle'
+task 'checkAll'
 
-android {
-    // http://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.LintOptions.html
-    lintOptions {
-        abortOnError false // Errors report will be generated and shown by Jenkins
 
-        htmlOutput file("${REPORTS_DIR}/lint/lint-results.html")
-        xmlOutput file("${REPORTS_DIR}/lint/lint-results.xml")
+// Lint
 
-        // Overriding lintConfig method to apply severity levels from lint config file
-        // to 'lintOptions' object, to be applied by Android Studio (which ignores config file)
-        it.metaClass.lintConfig = { File file ->
-            setLintConfig(file) // Calling original setter
+afterEvaluate {
+    android {
+        // http://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.LintOptions.html
+        lintOptions {
+            abortOnError false // Errors report will be generated and shown by Jenkins
 
-            new XmlSlurper().parse(file).issue.each { issue ->
-                def severity = issue.@severity.text()
-                def id = issue.@id.text()
-                if (severity && id) {
-                    "$severity"(id) // Dynamic call for methods like 'ignore(..)' and so on
+            htmlOutput file("${REPORTS_DIR}/lint/lint-results.html")
+            xmlOutput file("${REPORTS_DIR}/lint/lint-results.xml")
+
+            // Overriding lintConfig method to apply severity levels from lint config file
+            // to 'lintOptions' object, to be applied by Android Studio (which ignores config file)
+            it.metaClass.lintConfig = { File file ->
+                setLintConfig(file) // Calling original setter
+
+                new XmlSlurper().parse(file).issue.each { issue ->
+                    def severity = issue.@severity.text()
+                    def id = issue.@id.text()
+                    if (severity && id) {
+                        "$severity"(id) // Dynamic call for methods like 'ignore(..)' and so on
+                    }
                 }
             }
-        }
 
-        lintConfig file("${rootDir}/libraries/GradleBuild/checks/lint.xml")
+            lintConfig file("${rootDir}/libraries/GradleBuild/checks/lint.xml")
+        }
     }
 }
+
+
+// Checkstyle
+
+apply plugin: 'checkstyle'
 
 checkstyle {
     // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
@@ -71,4 +83,25 @@ task checkstyle(type: Checkstyle) {
     ignoreFailures = true // Errors report will be generated and shown by Jenkins
 }
 
-project.tasks.getByName('check').dependsOn 'checkstyle'
+tasks['checkAll'].dependsOn 'checkstyle'
+
+
+// Ktlint
+
+apply plugin: 'org.jlleitschuh.gradle.ktlint'
+
+ktlint {
+    verbose = true
+    android = true
+    ignoreFailures = true
+    disabledRules = [
+            'import-ordering',
+            'no-consecutive-blank-lines',
+            'no-blank-line-before-rbrace'
+    ]
+    reporters {
+        reporter 'checkstyle'
+    }
+}
+
+tasks['checkAll'].dependsOn 'ktlintCheck'
