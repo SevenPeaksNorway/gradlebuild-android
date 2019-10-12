@@ -97,11 +97,12 @@ ext.setupVersion = { version ->
 
         if (variant.buildType.name == 'release') {
             versionCode = baseCode + buildNumber
-            println "VERSION CODE ${variant.name} = ${versionCode}"
         } else if (isOnBuildServer()) {
             versionName = "${version}-b${buildNumber}"
-            println "VERSION NAME ${variant.name} = ${versionName}"
+            versionCode = baseCode + buildNumber
         }
+
+        println "VERSION ${variant.name} = ${versionName} / ${versionCode}"
 
         // Rewriting version name and code for each output and setting apk file name
         variant.outputs.each { output ->

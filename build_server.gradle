@@ -40,22 +40,38 @@ project.afterEvaluate {
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
 
+        final assemble = "assemble${fullName}"
+        final bundle = "bundle${fullName}"
+
         addTasksDep ci, "lint${fullName}"
         addTasksDep ci, "test${fullName}UnitTest"
-        addTasksDep ci, isBundle ? "bundle${fullName}" : "assemble${fullName}"
+        addTasksDep ci, isBundle ? bundle : assemble
 
         if (isOnMaster) { // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
                 addTasksDep ci, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}"
             } else {
-                // Uploading to Firebase
-                addTasksDep "appDistributionUpload${fullName}", "assemble${fullName}"
-                addTasksDep ci, "appDistributionUpload${fullName}"
+                final fbUpload = "appDistributionUpload${fullName}"
+                final fbUploadTask = project.tasks.findByName(fbUpload)
 
-                // Uploading to Fabric (old)
-                addTasksDep "crashlyticsUploadDistribution${fullName}", "assemble${fullName}"
-                addTasksDep ci, "crashlyticsUploadDistribution${fullName}"
+                if (fbUploadTask != null ) {
+                    // Uploading to Firebase
+                    addTasksDep ci, fbUpload
+                    addTasksDep fbUpload, assemble
+
+                    fbUploadTask.doLast {
+                        // Notifying that changelog is uploaded, if needed
+                        if (isOnBuildServer && project.ext.has("onChangelogUploaded")) {
+                            onChangelogUploaded()
+                        }
+                    }
+                } else {
+                    // Uploading to Fabric (old)
+                    final betaUpload = "crashlyticsUploadDistribution${fullName}"
+                    addTasksDep betaUpload, assemble
+                    addTasksDep ci, betaUpload
+                }
             }
         }
     }

@@ -28,8 +28,9 @@ private String generateChangelogInternal() {
  */
 ext.onChangelogUploaded = {
     Properties props = getVcsProperties()
-    if (System.getenv('GIT_COMMIT')) {
-        props.put('GIT_PREVIOUS_COMMIT', getGitCommit())
+    final commit = System.getenv('GIT_COMMIT')
+    if (commit) {
+        props.put('GIT_PREVIOUS_COMMIT', commit)
         props.store(new FileWriter(getVcsPropsFileName()), '')
     }
 }
@@ -47,7 +48,7 @@ private String getChangeLogFromCommand(String command) {
         def log = proc.text
 
         println "------- CHANGELOG ------\n" +
-                "${log}\n" +
+                "${log}" +
                 "------------------------\n"
 
         return log
