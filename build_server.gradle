@@ -27,14 +27,14 @@ project.afterEvaluate {
     println "BUILD on master: $isOnMaster"
 
     final String mode = System.properties.MODE
-    def (boolean isPublish, boolean isBundle, String buildMode, List<String> flavors) = parseMode(mode)
+    def (isPublish, isBundle, buildMode, flavors) = parseMode(mode)
 
-    println "BUILD MODE: mode = ${buildMode}, flavors = ${flavors}, publish = ${isPublish}, bundle = ${isBundle}"
+    println "BUILD MODE: mode = $buildMode, flavors = $flavors, publish = $isPublish, bundle = $isBundle"
 
     final ci = 'ci'
     rootProject.task ci
 
-    addTasksDep(rootProject, ci, rootProject, 'checkAll')
+    rootProject.addTaskDependency(ci, 'checkAll')
 
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
@@ -42,23 +42,24 @@ project.afterEvaluate {
         final assemble = "assemble${fullName}"
         final bundle = "bundle${fullName}"
 
-        addTasksDep(rootProject, ci, project, isBundle ? bundle : assemble)
-        addTasksDep(rootProject, ci, rootProject, "lint${fullName}")
-        addTasksDep(rootProject, ci, rootProject, "test${fullName}UnitTest")
+        rootProject.addTaskDependency(ci, isBundle ? bundle : assemble)
+        rootProject.addTaskDependency(ci, "lint${fullName}")
+        rootProject.addTaskDependency(ci, "test${fullName}UnitTest")
 
         if (isOnMaster) {
             // Only distributing from master branch
             if (isPublish) {
                 // Uploading to Play
-                addTasksDep(rootProject, ci, project, isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
+                rootProject.addTaskDependency(ci,
+                        isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
             } else {
                 final fbUpload = "appDistributionUpload${fullName}"
                 final fbUploadTask = project.tasks.findByName(fbUpload)
 
                 if (fbUploadTask != null) {
                     // Uploading to Firebase
-                    addTasksDep(project, fbUpload, project, assemble)
-                    addTasksDep(rootProject, ci, project, fbUpload)
+                    project.addTaskDependency(fbUpload, assemble)
+                    rootProject.addTaskDependency(ci, fbUpload)
 
                     fbUploadTask.doLast {
                         // Notifying that changelog is uploaded, if needed
@@ -69,8 +70,8 @@ project.afterEvaluate {
                 } else {
                     // Uploading to Fabric (old)
                     final betaUpload = "crashlyticsUploadDistribution${fullName}"
-                    addTasksDep(project, betaUpload, project, assemble)
-                    addTasksDep(rootProject, ci, project, betaUpload)
+                    project.addTaskDependency(betaUpload, assemble)
+                    rootProject.addTaskDependency(ci, betaUpload)
                 }
             }
         }
@@ -120,32 +121,25 @@ private def parseMode(String mode) {
     return [publish, bundle, buildMode, flavors]
 }
 
-private static void addTasksDep(
-        Project project, String task, Project projectTarget, String taskTarget) {
-    if (!project.tasks.asMap.containsKey(task)) return
-
-    final tasks = findAll(projectTarget, taskTarget)
-    if (tasks.isEmpty()) {
-        println "Cannot add dependency from ${task} to ${taskTarget}"
-    } else {
-        tasks.forEach { it -> project.tasks[task].dependsOn it }
-    }
+Project.metaClass.getTask = { String taskName, Closure closure ->
+    delegate.tasks.forEach { task -> if (task.name == taskName) closure.call(task) }
+    delegate.tasks.whenTaskAdded { task -> if (task.name == taskName) closure.call(task) }
 }
 
-private static List<TaskProvider> findAll(Project root, String task) {
-    final list = new ArrayList()
+Project.metaClass.findTasks = { String taskName, Closure closure ->
+    delegate.tasks.forEach { task -> if (task.name == taskName) closure.call(task) }
+    delegate.tasks.whenTaskAdded { task -> if (task.name == taskName) closure.call(task) }
+    delegate.subprojects { sub -> sub.findTasks(taskName, closure) }
+}
 
-    try {
-        list.add(root.tasks.named(task))
-    } catch (Exception ignored) {}
-
-    root.subprojects {
-        try {
-            list.add(project.tasks.named(task))
-        } catch (Exception ignored) {}
+Project.metaClass.addTaskDependency = { String sourceTask, String targetTask ->
+    final project = delegate;
+    project.getTask(sourceTask) { source ->
+        project.findTasks(targetTask) { target ->
+            println "Added task dependency: ${source.name} -> :${target.project.name}:${target.name}"
+            source.dependsOn target
+        }
     }
-
-    return list
 }
 
 private static String toCamelCase(String snakeCase) {
