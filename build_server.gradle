@@ -32,9 +32,11 @@ project.afterEvaluate {
     println "BUILD MODE: mode = $buildMode, flavors = $flavors, publish = $isPublish, bundle = $isBundle"
 
     final ci = 'ci'
+    final check = 'checkAll'
+
     rootProject.task ci
 
-    rootProject.addTaskDependency(ci, 'checkAll')
+    rootProject.addTaskDependency(ci, check)
 
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
@@ -59,6 +61,7 @@ project.afterEvaluate {
                 if (fbUploadTask != null) {
                     // Uploading to Firebase
                     project.addTaskDependency(fbUpload, assemble)
+                    project.addTaskDependency(fbUpload, check)
                     rootProject.addTaskDependency(ci, fbUpload)
 
                     fbUploadTask.doLast {
@@ -71,6 +74,7 @@ project.afterEvaluate {
                     // Uploading to Fabric (old)
                     final betaUpload = "crashlyticsUploadDistribution${fullName}"
                     project.addTaskDependency(betaUpload, assemble)
+                    project.addTaskDependency(betaUpload, check)
                     rootProject.addTaskDependency(ci, betaUpload)
                 }
             }
