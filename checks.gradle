@@ -61,7 +61,7 @@ apply plugin: 'checkstyle'
 
 checkstyle {
     // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
-    toolVersion = '6.15'
+    toolVersion = '8.25'
     configFile file("${rootDir}/libraries/GradleBuild/checks/checkstyle.xml")
 }
 
