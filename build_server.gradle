@@ -70,12 +70,6 @@ project.afterEvaluate {
                             onChangelogUploaded()
                         }
                     }
-                } else {
-                    // Uploading to Fabric (old)
-                    final betaUpload = "crashlyticsUploadDistribution${fullName}"
-                    project.addTaskDependency(betaUpload, assemble)
-                    project.addTaskDependency(betaUpload, check)
-                    rootProject.addTaskDependency(ci, betaUpload)
                 }
             }
         }
