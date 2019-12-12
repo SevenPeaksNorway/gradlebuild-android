@@ -38,8 +38,6 @@ project.afterEvaluate {
 
     rootProject.addTaskDependency(ci, check)
 
-    String previousAssemble = null
-
     flavors.each { String flavor ->
         final fullName = flavor.capitalize() + buildMode.capitalize()
 
@@ -49,10 +47,6 @@ project.afterEvaluate {
         rootProject.addTaskDependency(ci, isBundle ? bundle : assemble)
         rootProject.addTaskDependency(ci, "lint${fullName}")
         rootProject.addTaskDependency(ci, "test${fullName}UnitTest")
-
-        // Ensure flavors are built one by one, to avoid google services config parsing issue
-        if (previousAssemble) project.addTaskDependency("pre${fullName}Build", previousAssemble)
-        previousAssemble = assemble
 
         if (isOnMaster) {
             // Only distributing from master branch
@@ -137,7 +131,7 @@ Project.metaClass.findTasks = { String taskName, Closure closure ->
 }
 
 Project.metaClass.addTaskDependency = { String sourceTask, String targetTask ->
-    final project = delegate;
+    final project = delegate
     project.getTask(sourceTask) { source ->
         project.findTasks(targetTask) { target ->
             println "Added task dependency: ${source.name} -> :${target.project.name}:${target.name}"
