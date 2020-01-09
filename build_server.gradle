@@ -10,14 +10,10 @@ apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
  * Creates build task 'ci' to use with Jenkins.
  *
  * It expects MODE build parameter (provided with -DMODE=XXX by Jenkins) to provide flavor name.
- * If MODE is not set or set to 'BUILD', 'ALL' or 'BUILD_ALL' then all debug flavors will be built.
- * If MODE is set to 'PUBLISH' or 'PUBLISH_ALL' then all release flavors will be uploaded to Play.
- * If MODE starts with 'PUBLISH_' (e.g. 'PUBLISH_PROD') then rest part will be consider as a release
- * flavor name to be uploaded to Play.
- * Otherwise MODE will be treated as a debug flavor name (with optional 'BUILD_' prefix).
+ * See "parseMode()" method comments below.
  *
- * This task will assemble, check and either upload debug build(s) to Fabric or upload release
- * build(s) to Play for given flavor(s).
+ * This task will assemble, check and optionally upload debug build(s) to App Distribution
+ * or upload release build(s) to Play for given flavor(s).
  */
 project.afterEvaluate {
     final boolean isOnBuildServer = System.getenv('BUILD_NUMBER') ?: false
@@ -77,9 +73,29 @@ project.afterEvaluate {
 }
 
 private def parseMode(String mode) {
+    /*
+     "mode" should consist of the next parts: {build_mode}_{bundle}_{flavor}
+
+     "build-mode" options:
+     * BUILD - debug build mode
+     * PUBLISH - release build mode + distribute to Play if configured
+     * empty - debug build mode
+
+     "bundle" options:
+     * BUNDLE - build app bundle instead of apk
+     * empty - build regular apk
+
+     "flavor" options:
+     * flavor name part (snake case) - picking all flavors containing this part
+     * ALL - picking all flavors
+     * empty - picking all flavors
+
+     E.g. "PUBLISH_PROD", "BUILD", "PUBLISH_BUNDLE", "BUILD_HUAWEI_DEV", "PROD"
+    */
+
     boolean publish = false
     boolean bundle = false
-    String singleFlavor = null
+    String flavorPart = null
 
     if (!mode || mode == 'BUILD') {
         mode = 'ALL'
@@ -102,19 +118,18 @@ private def parseMode(String mode) {
     }
 
     if (mode != 'ALL') {
-        singleFlavor = toCamelCase(mode)
+        flavorPart = toCamelCase(mode)
     }
 
     final String buildMode = publish ? 'release' : 'debug'
-    final List<String> flavors
-
-    if (singleFlavor) {
-        flavors = Arrays.asList(singleFlavor)
-    } else {
-        flavors = project.android.applicationVariants
-                .findAll { it.buildType.name == buildMode }
-                .collect { it.flavorName }
-    }
+    final List<String> flavors = project.android.applicationVariants
+            .findAll {
+                it.buildType.name == buildMode &&
+                        (flavorPart == null ||
+                                it.flavorName.contains(flavorPart) ||
+                                it.flavorName.contains(flavorPart.capitalize()))
+            }
+            .collect { it.flavorName ?: "" }
 
     return [publish, bundle, buildMode, flavors]
 }
@@ -148,8 +163,8 @@ private static boolean isMasterBranch() {
     try {
         def commit = 'git rev-parse HEAD'.execute().text.trim()
         def final branch = "git branch -r --contains ${commit}".execute().text.trim()
-        println "BUILD branch: ${branch}"
-        return branch.find('/master$')
+        println "BUILD branch(es): ${branch.replaceAll("\\s*\n\\s*", " | ")}"
+        return branch.find('(?m)/master$')
     } catch (Exception ignored) {
         System.err.println 'Current branch is not available'
         return false
