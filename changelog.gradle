@@ -17,8 +17,8 @@ private String generateChangelogInternal() {
     if (commit && prevCommit) {
         println "CHANGELOG: Generating change log from '${commit}' to '${prevCommit}'"
 
-        return getChangeLogFromCommand("git log --pretty=format:\"%s\" ${prevCommit}..${commit}" +
-                " | grep -ivE \"^Merged.*\$|/logoff\$\"")
+        return getChangeLogFromCommand(
+                "git log --pretty=format:%s ${prevCommit}..${commit} --no-merges --reverse")
     }
     return ""
 }
