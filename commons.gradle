@@ -44,7 +44,7 @@ android {
     }
 }
 
-String appName = 'app'
+String outputFileAppName = 'app'
 
 /**
  * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
@@ -52,9 +52,12 @@ String appName = 'app'
  * Should be called after call to `setupVersion`, e.g.:
  *   setOutputFileName 'app-name'
  */
-ext.setOutputFileName = { name ->
-    appName = name
+ext.outputFileName = { name ->
+    outputFileAppName = name
 }
+
+// For backward compatibility
+ext.setOutputFileName = ext.outputFileName
 
 /**
  * Sets app version name and version code.
@@ -69,17 +72,17 @@ ext.setOutputFileName = { name ->
  * Should be called instead of 'versionName' / 'versionCode' within defaultConfig closure:
  * "setupVersion it, 'X.Y.Z'".
  */
-ext.setupVersion = { version ->
+ext.appVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
-    println "VERSION: BASE NAME = ${version}"
-    println "VERSION: BASE CODE = ${baseCode}"
-    println "VERSION: BUILD = ${buildNumber}"
+    println "VERSION  | Base name: ${version}"
+    println "VERSION  | Base code: ${baseCode}"
+    println "VERSION  | Build number: ${buildNumber}"
 
     android.defaultConfig.with {
-        versionCode baseCode
         versionName version
+        versionCode baseCode
         buildConfigField 'int', 'BUILD_NUMBER', "${buildNumber}"
     }
 
@@ -92,29 +95,37 @@ ext.setupVersion = { version ->
         // When building on build server (and distributing with Fabric) it is important to include
         // build number in version name to make it easier for testers to provide exact build number
 
-        Integer versionCode = baseCode
-        String versionName = version
+        String versionName
+        Integer versionCode
 
         if (variant.buildType.name == 'release') {
+            versionName = version
             versionCode = baseCode + buildNumber
         } else if (isOnBuildServer()) {
             versionName = "${version}-b${buildNumber}"
             versionCode = baseCode + buildNumber
+        } else {
+            // Debug builds on local machine
+            versionName = version
+            versionCode = baseCode
         }
 
-        println "VERSION ${variant.name} = ${versionName} / ${versionCode}"
+        println "VERSION  | ${variant.name} = ${versionName} / ${versionCode}"
 
         // Rewriting version name and code for each output and setting apk file name
         variant.outputs.each { output ->
             output.versionCodeOverride = versionCode
             output.versionNameOverride = versionName
-            output.outputFileName = "${appName}-${output.baseName}-${versionName}.apk"
+            output.outputFileName = "${outputFileAppName}-${output.baseName}-${versionName}.apk"
         }
 
         // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
         variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"${versionName}\""
     }
 }
+
+// For backward compatibility
+ext.setupVersion = ext.appVersion
 
 private static int getBaseVersionCode(String version) {
     // Version code has next format: XYYZZBBBB,
@@ -148,6 +159,46 @@ private static int getBuildNumber() {
     }
 
     return build
+}
+
+boolean appNameEnabled = false
+String appNameBase = null
+final Map<String, String> appNames = new HashMap<String, String>()
+final Map<String, String> appNameSuffixes = new HashMap<String, String>()
+
+ext.appNameBase = { name ->
+    appNameBase = name
+    enableAppNameLogic()
+}
+
+ext.appName = { config, name ->
+    appNames.put(config.name, name)
+    enableAppNameLogic()
+}
+
+ext.appNameSuffix = { config, suffix ->
+    appNameSuffixes.put(config.name, suffix)
+}
+
+ext.enableAppNameLogic = {
+    if (appNameEnabled) return
+    appNameEnabled = true
+
+    android.applicationVariants.whenObjectAdded { variant ->
+        def appName = variant.productFlavors.collect { appNames.get(it.name) }.find { it != null }
+                ?: appNames.get(variant.buildType.name)
+                ?: appNameBase
+
+        if (appName != null) {
+            def suffixes = variant.productFlavors.collect { appNameSuffixes.get(it.name) } +
+                    appNameSuffixes.get(variant.buildType.name)
+            def suffix = suffixes.findAll { it != null }.join("")
+            appName += suffix
+
+            println "APP NAME | ${variant.name} = ${appName}"
+            resValue 'string', 'app_name', appName
+        }
+    }
 }
 
 /**

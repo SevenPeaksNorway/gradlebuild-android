@@ -17,15 +17,15 @@ apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
  */
 project.afterEvaluate {
     final boolean isOnBuildServer = System.getenv('BUILD_NUMBER') ?: false
-    println "BUILD on build server: $isOnBuildServer"
+    println "BUILD | On build server: $isOnBuildServer"
 
     final boolean isOnMaster = isMasterBranch()
-    println "BUILD on master: $isOnMaster"
+    println "BUILD | On master branch: $isOnMaster"
 
     final String mode = System.properties.MODE
     def (isPublish, isBundle, buildMode, flavors) = parseMode(mode)
 
-    println "BUILD MODE: mode = $buildMode, flavors = $flavors, publish = $isPublish, bundle = $isBundle"
+    println "BUILD | Buid mode = $buildMode | Flavors = $flavors | Publish = $isPublish | Bundle = $isBundle"
 
     final ci = 'ci'
     final check = 'checkAll'
@@ -163,7 +163,7 @@ private static boolean isMasterBranch() {
     try {
         def commit = 'git rev-parse HEAD'.execute().text.trim()
         def final branch = "git branch -r --contains ${commit}".execute().text.trim()
-        println "BUILD branch(es): ${branch.replaceAll("\\s*\n\\s*", " | ")}"
+        println "BUILD | Branch(es): \"${branch.replaceAll("\\s*\n\\s*", "\", \"")}\""
         return branch.find('(?m)/master$')
     } catch (Exception ignored) {
         System.err.println 'Current branch is not available'

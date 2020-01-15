@@ -48,7 +48,7 @@ private String getChangeLogFromCommand(String command) {
         def log = proc.text
 
         println "------- CHANGELOG ------\n" +
-                "${log}" +
+                "${log}\n" +
                 "------------------------\n"
 
         return log
