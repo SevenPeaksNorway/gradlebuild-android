@@ -166,16 +166,30 @@ String appNameBase = null
 final Map<String, String> appNames = new HashMap<String, String>()
 final Map<String, String> appNameSuffixes = new HashMap<String, String>()
 
+/**
+ * Sets base app name that will be automatically added as "app_name" string resource.
+ * Can be further modified with "appName" and "appNameSuffix".
+ */
 ext.appNameBase = { name ->
     appNameBase = name
     enableAppNameLogic()
 }
 
+/**
+ * When applied to build types or flavor config will override app name set with "appNameBase".
+ * Note that app name set for a flavor will have higher priority than app name set for a build type.
+ */
 ext.appName = { config, name ->
     appNames.put(config.name, name)
     enableAppNameLogic()
 }
 
+/**
+ * If app name is set (either using "appNameBase" or "appName") then this suffix will be appended
+ * to the end of the name.
+ * Suffixes added for different flavor dimension and for build types will be stacked together,
+ * with suffixes from flavors at first and then a suffix from build type (if any).
+ */
 ext.appNameSuffix = { config, suffix ->
     appNameSuffixes.put(config.name, suffix)
 }
@@ -201,6 +215,11 @@ ext.enableAppNameLogic = {
     }
 }
 
+/**
+ * Adds and configures new "debugHuawei" and "releaseHuawei" build types.
+ * Huawei release build type will be automatically set to use "huawei" sign config (falling back
+ * to debug sign config).
+ */
 ext.addHuaweiBuildTypes = {
     // Adding "huawei" signing config if missing
     if (android.signingConfigs.findByName("huawei") == null) {
