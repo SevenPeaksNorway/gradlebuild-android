@@ -201,6 +201,35 @@ ext.enableAppNameLogic = {
     }
 }
 
+ext.addHuaweiBuildTypes = {
+    // Adding "huawei" signing config if missing
+    if (android.signingConfigs.findByName("huawei") == null) {
+        android.signingConfigs {
+            huawei {
+                initWith debug
+            }
+        }
+    }
+
+    android.buildTypes {
+        debugHuawei {
+            initWith debug
+            matchingFallbacks = ['debug']
+
+            applicationIdSuffix '.huawei'
+            appNameSuffix it, ' HW'
+        }
+        releaseHuawei {
+            initWith release
+            matchingFallbacks = ['release']
+
+            signingConfig android.signingConfigs.huawei
+
+            applicationIdSuffix '.huawei'
+        }
+    }
+}
+
 /**
  * Whether we are running on build server currently or not.
  */

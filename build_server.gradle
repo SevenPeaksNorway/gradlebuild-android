@@ -23,9 +23,9 @@ project.afterEvaluate {
     println "BUILD | On master branch: $isOnMaster"
 
     final String mode = System.properties.MODE
-    def (isPublish, isBundle, buildMode, flavors) = parseMode(mode)
+    def (isPublish, isBundle, variants) = parseMode(mode)
 
-    println "BUILD | Buid mode = $buildMode | Flavors = $flavors | Publish = $isPublish | Bundle = $isBundle"
+    println "BUILD | Variants: $variants | Publish = $isPublish | Bundle = $isBundle"
 
     final ci = 'ci'
     final check = 'checkAll'
@@ -34,8 +34,8 @@ project.afterEvaluate {
 
     rootProject.addTaskDependency(ci, check)
 
-    flavors.each { String flavor ->
-        final fullName = flavor.capitalize() + buildMode.capitalize()
+    variants.each { String variant ->
+        final fullName = variant.capitalize()
 
         final assemble = "assemble${fullName}"
         final bundle = "bundle${fullName}"
@@ -122,16 +122,19 @@ private def parseMode(String mode) {
     }
 
     final String buildMode = publish ? 'release' : 'debug'
-    final List<String> flavors = project.android.applicationVariants
+
+    final List<String> variants = project.android.applicationVariants
             .findAll {
-                it.buildType.name == buildMode &&
+                it.buildType.name.startsWith(buildMode) &&
                         (flavorPart == null ||
                                 it.flavorName.contains(flavorPart) ||
                                 it.flavorName.contains(flavorPart.capitalize()))
             }
-            .collect { it.flavorName ?: "" }
+            .collect { it.name }
 
-    return [publish, bundle, buildMode, flavors]
+    Collections.reverse(variants)
+
+    return [publish, bundle, variants]
 }
 
 Project.metaClass.getTask = { String taskName, Closure closure ->
