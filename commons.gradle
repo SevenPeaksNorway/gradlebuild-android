@@ -215,6 +215,22 @@ ext.enableAppNameLogic = {
     }
 }
 
+ext.enableCrashlytics = {
+    android.buildTypes {
+        debug {
+            setCrashlyticsEnabled it, isOnBuildServer()
+        }
+        release {
+            setCrashlyticsEnabled it, true
+        }
+    }
+}
+
+private static setCrashlyticsEnabled(config, enabled) {
+    config.buildConfigField 'Boolean', 'IS_CRASHLYTICS_ENABLED', enabled ? 'true' : 'false'
+    config.manifestPlaceholders = [crashReportingEnabled: enabled ?: false]
+}
+
 /**
  * Adds and configures new "debugHuawei" and "releaseHuawei" build types.
  * Huawei release build type will be automatically set to use "huawei" sign config (falling back
@@ -245,6 +261,15 @@ ext.addHuaweiBuildTypes = {
             signingConfig android.signingConfigs.huawei
 
             applicationIdSuffix '.huawei'
+        }
+    }
+}
+
+ext.ignoreNonProductionReleaseVariants = {
+    // Ignoring useless build variants
+    android.variantFilter { variant ->
+        if (variant.buildType.name.contains('release') && !variant.flavors*.name.contains('prod')) {
+            variant.setIgnore(true)
         }
     }
 }
