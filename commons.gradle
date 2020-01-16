@@ -76,9 +76,9 @@ ext.appVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
-    println "VERSION  | Base name: ${version}"
-    println "VERSION  | Base code: ${baseCode}"
-    println "VERSION  | Build number: ${buildNumber}"
+    log "VERSION  | Base name: ${version}"
+    log "VERSION  | Base code: ${baseCode}"
+    log "VERSION  | Build number: ${buildNumber}"
 
     android.defaultConfig.with {
         versionName version
@@ -110,7 +110,7 @@ ext.appVersion = { version ->
             versionCode = baseCode
         }
 
-        println "VERSION  | ${variant.name} = ${versionName} / ${versionCode}"
+        log "VERSION  | ${variant.name} = ${versionName} / ${versionCode}"
 
         // Rewriting version name and code for each output and setting apk file name
         variant.outputs.each { output ->
@@ -149,7 +149,7 @@ private static int getBuildNumber() {
         def final buildStr = 'git rev-list --count HEAD'.execute().text.trim()
         build = buildStr.toInteger()
     } catch (Exception ignored) {
-        System.err.println 'Build number is not available'
+        if (verbose()) System.err.println 'Build number is not available'
         return 1
     }
 
@@ -209,7 +209,7 @@ ext.enableAppNameLogic = {
             def suffix = suffixes.findAll { it != null }.join("")
             appName += suffix
 
-            println "APP NAME | ${variant.name} = ${appName}"
+            log "APP NAME | ${variant.name} = ${appName}"
             resValue 'string', 'app_name', appName
         }
     }
@@ -284,4 +284,12 @@ ext.setBooleanField = { obj, key, value ->
  */
 ext.setStringRes = { obj, key, value ->
     obj.resValue 'string', key, value
+}
+
+private static boolean verbose() {
+    return System.properties.VERBOSE != "false"
+}
+
+private static void log(String message) {
+    if (verbose()) println message
 }

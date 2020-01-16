@@ -15,7 +15,7 @@ private String generateChangelogInternal() {
     final String prevCommit = getVcsProperties().GIT_PREVIOUS_COMMIT
 
     if (commit && prevCommit) {
-        println "CHANGELOG: Generating change log from '${commit}' to '${prevCommit}'"
+        log "CHANGELOG: Generating change log from '${commit}' to '${prevCommit}'"
 
         return getChangeLogFromCommand(
                 "git log --pretty=format:%s ${prevCommit}..${commit} --no-merges --reverse")
@@ -38,20 +38,20 @@ ext.onChangelogUploaded = {
 /**
  * Generates git change log by executing provided bash command.
  */
-private String getChangeLogFromCommand(String command) {
+private static String getChangeLogFromCommand(String command) {
     def proc = ["bash", "-c", command].execute()
     proc.waitFor()
     if (proc.exitValue() != 0) {
-        println "CHANGELOG: Error ${proc.err.text}"
+        log "CHANGELOG: Error ${proc.err.text}"
         return ""
     } else {
-        def log = proc.text
+        def changelog = proc.text
 
-        println "------- CHANGELOG ------\n" +
-                "${log}\n" +
+        log "------- CHANGELOG ------\n" +
+                "${changelog}\n" +
                 "------------------------\n"
 
-        return log
+        return changelog
     }
 }
 
@@ -60,7 +60,7 @@ private Properties getVcsProperties() {
     try {
         props.load(new FileInputStream(getVcsPropsFileName()))
     } catch (Exception ignored) {
-        println 'CHANGELOG: No previous git properties detected'
+        log 'CHANGELOG: No previous git properties detected'
     }
     return props
 }
@@ -69,4 +69,12 @@ private String getVcsPropsFileName() {
     String mode = System.properties.MODE
     String modeName = mode ? mode.toLowerCase() : ''
     return "${rootDir.absolutePath}/../vcs_${modeName}.properties"
+}
+
+private static boolean verbose() {
+    return System.properties.VERBOSE != "false"
+}
+
+private static void log(String message) {
+    if (verbose()) println message
 }

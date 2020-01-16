@@ -17,15 +17,15 @@ apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
  */
 project.afterEvaluate {
     final boolean isOnBuildServer = System.getenv('BUILD_NUMBER') ?: false
-    println "BUILD | On build server: $isOnBuildServer"
+    log "BUILD | On build server: $isOnBuildServer"
 
     final boolean isOnMaster = isMasterBranch()
-    println "BUILD | On master branch: $isOnMaster"
+    log "BUILD | On master branch: $isOnMaster"
 
     final String mode = System.properties.MODE
     def (isPublish, isBundle, variants) = parseMode(mode)
 
-    println "BUILD | Variants: $variants | Publish = $isPublish | Bundle = $isBundle"
+    log "BUILD | Variants: $variants | Publish = $isPublish | Bundle = $isBundle"
 
     final ci = 'ci'
     final check = 'checkAll'
@@ -152,7 +152,7 @@ Project.metaClass.addTaskDependency = { String sourceTask, String targetTask ->
     final project = delegate
     project.getTask(sourceTask) { source ->
         project.findTasks(targetTask) { target ->
-            println "Added task dependency: ${source.name} -> :${target.project.name}:${target.name}"
+            log "Added task dependency: ${source.name} -> :${target.project.name}:${target.name}"
             source.dependsOn target
         }
     }
@@ -166,10 +166,18 @@ private static boolean isMasterBranch() {
     try {
         def commit = 'git rev-parse HEAD'.execute().text.trim()
         def final branch = "git branch -r --contains ${commit}".execute().text.trim()
-        println "BUILD | Branch(es): \"${branch.replaceAll("\\s*\n\\s*", "\", \"")}\""
+        log "BUILD | Branch(es): \"${branch.replaceAll("\\s*\n\\s*", "\", \"")}\""
         return branch.find('(?m)/master$')
     } catch (Exception ignored) {
-        System.err.println 'Current branch is not available'
+        if (verbose()) System.err.println 'Current branch is not available'
         return false
     }
+}
+
+private static boolean verbose() {
+    return System.properties.VERBOSE != "false"
+}
+
+private static void log(String message) {
+    if (verbose()) println message
 }
