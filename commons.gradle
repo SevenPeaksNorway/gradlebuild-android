@@ -98,15 +98,20 @@ ext.appVersion = { version ->
         String versionName
         Integer versionCode
 
-        if (variant.buildType.name == 'release') {
-            versionName = version
+        def suffixes = variant.productFlavors.collect { it.versionNameSuffix } +
+                variant.buildType.versionNameSuffix
+        def suffix = suffixes.findAll { it != null }.join("")
+        def baseVersion = version + suffix
+
+        if (variant.buildType.name.contains('release')) {
+            versionName = baseVersion
             versionCode = baseCode + buildNumber
         } else if (isOnBuildServer()) {
-            versionName = "${version}-b${buildNumber}"
+            versionName = "${baseVersion}-b${buildNumber}"
             versionCode = baseCode + buildNumber
         } else {
             // Debug builds on local machine
-            versionName = version
+            versionName = baseVersion
             versionCode = baseCode
         }
 
@@ -257,6 +262,7 @@ ext.addHuaweiBuildTypes = {
 
             applicationIdSuffix '.huawei'
             appNameSuffix it, ' HW'
+            versionNameSuffix "-hw"
         }
         releaseHuawei {
             initWith release
@@ -265,6 +271,7 @@ ext.addHuaweiBuildTypes = {
             signingConfig android.signingConfigs.huawei
 
             applicationIdSuffix '.huawei'
+            versionNameSuffix "-hw"
         }
     }
 }
