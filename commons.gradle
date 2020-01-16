@@ -215,6 +215,10 @@ ext.enableAppNameLogic = {
     }
 }
 
+/**
+ * Enables Crashlytics (by adding BuildConfig.IS_CRASHLYTICS_ENABLED flag and crashReportingEnabled
+ * manifest placeholder). Crashlytics is disabled for local debug builds.
+ */
 ext.enableCrashlytics = {
     android.buildTypes {
         debug {
@@ -265,6 +269,9 @@ ext.addHuaweiBuildTypes = {
     }
 }
 
+/**
+ * Filters out all release builds which are not related to "prod" flavor.
+ */
 ext.ignoreNonProductionReleaseVariants = {
     // Ignoring useless build variants
     android.variantFilter { variant ->
