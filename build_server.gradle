@@ -36,20 +36,23 @@ project.afterEvaluate {
 
     variants.each { String variant ->
         final fullName = variant.capitalize()
+        final boolean isHuawei = fullName.contains("Huawei")
 
         final assemble = "assemble${fullName}"
         final bundle = "bundle${fullName}"
 
-        rootProject.addTaskDependency(ci, isBundle ? bundle : assemble)
+        rootProject.addTaskDependency(ci, isBundle && !isHuawei ? bundle : assemble)
         rootProject.addTaskDependency(ci, "lint${fullName}")
         rootProject.addTaskDependency(ci, "test${fullName}UnitTest")
 
         if (isOnMaster) {
             // Only distributing from master branch
             if (isPublish) {
-                // Uploading to Play
-                rootProject.addTaskDependency(ci,
-                        isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
+                if (!isHuawei) {
+                    // Uploading to Play, if configured
+                    rootProject.addTaskDependency(ci,
+                            isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
+                }
             } else {
                 final fbUpload = "appDistributionUpload${fullName}"
                 final fbUploadTask = project.tasks.findByName(fbUpload)
