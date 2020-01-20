@@ -51,7 +51,7 @@ project.afterEvaluate {
                 if (!isHuawei) {
                     // Uploading to Play, if configured
                     rootProject.addTaskDependency(ci,
-                            isBundle ? "publishBundle${fullName}" : "publishApk${fullName}")
+                            isBundle ? "publish${fullName}Bundle" : "publish${fullName}Apk")
                 }
             } else {
                 final fbUpload = "appDistributionUpload${fullName}"
