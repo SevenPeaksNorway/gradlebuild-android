@@ -75,6 +75,14 @@ project.afterEvaluate {
     }
 }
 
+// Play distribution plugin default settings
+if (hasProperty('play')) {
+    play {
+        track = 'alpha'
+        resolutionStrategy = "ignore"
+    }
+}
+
 private def parseMode(String mode) {
     /*
      "mode" should consist of the next parts: {build_mode}_{bundle}_{flavor}
