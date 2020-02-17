@@ -1,0 +1,24 @@
+/*
+Import this script in *root* build file:
+
+buildscript {
+    classpath "com.osacky.flank.gradle:fladle:0.8.0"
+}
+
+and in your app's build.gradle you have to declare the project id
+fladle {
+    serviceAccountCredentials("${project.file("src/prod/app-dist-account.json")}")
+    projectId("xxxx-xxxx-xxxx")
+    useOrchestrator = true
+    devices = [
+            ["model": "Nexus6", "version": "21", "locale": "en", "orientation": "portrait"]
+    ]
+}
+*/
+
+apply plugin: "com.osacky.fladle"
+
+fladle {
+    debugApk("$buildDir/outputs/apk/mock/app-mock.apk")
+    instrumentationApk("$buildDir/outputs/apk/androidTest/mock/app-mock-androidTest.apk")
+}
