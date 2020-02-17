@@ -54,22 +54,43 @@ project.afterEvaluate {
                             isBundle ? "publish${fullName}Bundle" : "publish${fullName}Apk")
                 }
             } else {
-                final fbUpload = "appDistributionUpload${fullName}"
-                final fbUploadTask = project.tasks.findByName(fbUpload)
+                final fBTestLabTask = "runFlank"
+                final isFBTestLabTaskExisting = project.tasks.findByName(fBTestLabTask)
+                if (isFBTestLabTaskExisting != null) {
+                    final assembleDevMockTask = "assembleDevMock"
+                    final assembleDevMockAndroidTestTask = "assembleDevMockAndroidTest"
 
-                if (fbUploadTask != null) {
-                    // Uploading to Firebase
-                    project.addTaskDependency(fbUpload, assemble)
-                    project.addTaskDependency(fbUpload, check)
-                    rootProject.addTaskDependency(ci, fbUpload)
+                    project.addTaskDependency(assembleDevMockTask, assemble)
+                    project.addTaskDependency(assembleDevMockTask, check)
 
-                    fbUploadTask.doLast {
-                        // Notifying that changelog is uploaded, if needed
-                        if (isOnBuildServer && project.ext.has("onChangelogUploaded")) {
-                            onChangelogUploaded()
-                        }
-                    }
+                    project.addTaskDependency(assembleDevMockAndroidTestTask, assemble)
+                    project.addTaskDependency(assembleDevMockAndroidTestTask, check)
+
+                    project.addTaskDependency(fBTestLabTask, assemble)
+                    project.addTaskDependency(fBTestLabTask, check)
+                    project.addTaskDependency(fBTestLabTask, assembleDevMockTask)
+                    project.addTaskDependency(fBTestLabTask, assembleDevMockAndroidTestTask)
+                    rootProject.addTaskDependency(ci, assembleDevMockTask)
+                    rootProject.addTaskDependency(ci, assembleDevMockAndroidTestTask)
+//                    rootProject.addTaskDependency(ci, fBTestLabTask)
                 }
+
+//                final fbUpload = "appDistributionUpload${fullName}"
+//                final fbUploadTask = project.tasks.findByName(fbUpload)
+//
+//                if (fbUploadTask != null) {
+//                    // Uploading to Firebase
+//                    project.addTaskDependency(fbUpload, assemble)
+//                    project.addTaskDependency(fbUpload, check)
+//                    rootProject.addTaskDependency(ci, fbUpload)
+//
+//                    fbUploadTask.doLast {
+//                        // Notifying that changelog is uploaded, if needed
+//                        if (isOnBuildServer && project.ext.has("onChangelogUploaded")) {
+//                            onChangelogUploaded()
+//                        }
+//                    }
+//                }
             }
         }
     }
@@ -80,6 +101,13 @@ if (hasProperty('play')) {
     play {
         track = 'alpha'
         resolutionStrategy = "ignore"
+    }
+}
+
+if (hasProperty('fladle')) {
+    fladle {
+        debugApk("$buildDir/outputs/apk/mock/app-mock.apk")
+        instrumentationApk("$buildDir/outputs/apk/androidTest/mock/app-mock-androidTest.apk")
     }
 }
 

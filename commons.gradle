@@ -226,6 +226,9 @@ ext.enableAppNameLogic = {
  */
 ext.enableCrashlytics = {
     android.buildTypes {
+        mock {
+            setCrashlyticsEnabled it, isOnBuildServer()
+        }
         debug {
             setCrashlyticsEnabled it, isOnBuildServer()
         }
