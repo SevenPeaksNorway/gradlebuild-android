@@ -45,14 +45,12 @@ project.afterEvaluate {
         rootProject.addTaskDependency(ci, "lint${fullName}")
         rootProject.addTaskDependency(ci, "test${fullName}UnitTest")
 
-        if (isOnMaster) {
-            // Only distributing from master branch
+        if (isOnMaster && !isHuawei) {
+            // Only distributing from master branch. No distribution for Huawei builds.
             if (isPublish) {
-                if (!isHuawei) {
-                    // Uploading to Play, if configured
-                    rootProject.addTaskDependency(ci,
-                            isBundle ? "publish${fullName}Bundle" : "publish${fullName}Apk")
-                }
+                // Uploading to Play, if configured
+                rootProject.addTaskDependency(ci,
+                        isBundle ? "publish${fullName}Bundle" : "publish${fullName}Apk")
             } else {
                 final fbUpload = "appDistributionUpload${fullName}"
                 final fbUploadTask = project.tasks.findByName(fbUpload)
@@ -101,7 +99,7 @@ private def parseMode(String mode) {
      * ALL - picking all flavors
      * empty - picking all flavors
 
-     E.g. "PUBLISH_PROD", "BUILD", "PUBLISH_BUNDLE", "BUILD_HUAWEI_DEV", "PROD"
+     E.g. "PUBLISH_PROD", "BUILD", "PUBLISH_BUNDLE", "BUILD_DEV_HUAWEI", "PROD"
     */
 
     boolean publish = false

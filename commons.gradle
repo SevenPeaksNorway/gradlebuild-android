@@ -34,12 +34,13 @@ android {
         }
     }
 
+    defaultConfig {
+        signingConfig signingConfigs.release // Release certificate by default
+    }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-        }
-        release {
-            signingConfig signingConfigs.release
         }
     }
 }
@@ -241,17 +242,17 @@ private static setCrashlyticsEnabled(config, enabled) {
 }
 
 /**
+ * Deprecated, use addVendorFlavors instead.
+ *
  * Adds and configures new "debugHuawei" and "releaseHuawei" build types.
  * Huawei release build type will be automatically set to use "huawei" sign config (falling back
  * to debug sign config).
  */
 ext.addHuaweiBuildTypes = {
     // Adding "huawei" signing config if missing
-    if (android.signingConfigs.findByName("huawei") == null) {
+    if (android.signingConfigs.findByName('huawei') == null) {
         android.signingConfigs {
-            huawei {
-                initWith debug
-            }
+            huawei.initWith debug
         }
     }
 
@@ -262,7 +263,7 @@ ext.addHuaweiBuildTypes = {
 
             applicationIdSuffix '.huawei'
             appNameSuffix it, ' HW'
-            versionNameSuffix "-hw"
+            versionNameSuffix '-hw'
         }
         releaseHuawei {
             initWith release
@@ -271,7 +272,50 @@ ext.addHuaweiBuildTypes = {
             signingConfig android.signingConfigs.huawei
 
             applicationIdSuffix '.huawei'
-            versionNameSuffix "-hw"
+            versionNameSuffix '-hw'
+        }
+    }
+}
+
+/**
+ * Adds and configures new dimension to separate Google and Huawei builds.
+ * Huawei release build type will automatically use "huawei" sign config (fallback to debug config).
+ */
+ext.addVendorFlavors = {
+    android.with {
+        // Adding "huawei" signing config if missing
+        if (signingConfigs.findByName('huawei') == null) {
+            android.signingConfigs {
+                huawei.initWith debug
+            }
+        }
+
+        final dimens = getFlavorDimensionList() ?: new ArrayList(0)
+
+        // Applying default dimension, in case it is not applied yet
+        if (dimens.size() == 1) {
+            final String defaultDimension = getFlavorDimensionList().get(0)
+            productFlavors.all { flavor ->
+                flavor.dimension defaultDimension
+            }
+        }
+
+        // Adding new flavor dimension
+        flavorDimensions ((dimens + 'vendor') as String[])
+
+        // Adding extra flavors
+        productFlavors {
+            google {
+                dimension 'vendor'
+            }
+            huawei {
+                dimension 'vendor'
+
+                applicationIdSuffix '.huawei'
+                versionNameSuffix '-hw'
+
+                signingConfig android.signingConfigs.huawei // Only applies to release builds
+            }
         }
     }
 }
@@ -282,9 +326,13 @@ ext.addHuaweiBuildTypes = {
 ext.ignoreNonProductionReleaseVariants = {
     // Ignoring useless build variants
     android.variantFilter { variant ->
-        if (variant.buildType.name.contains('release') && !variant.flavors*.name.contains('prod')) {
-            variant.setIgnore(true)
-        }
+        final names = variant.flavors*.name
+        // Ignoring non-prod release variants
+        final ignoreReleaseNonProd = variant.buildType.name == 'release' && !names.contains('prod')
+        // Ignoring non-prod Huawei variants
+        final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
+
+        if (ignoreReleaseNonProd || ignoreHuaweiNonProd) variant.setIgnore(true)
     }
 }
 
