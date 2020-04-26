@@ -2,7 +2,7 @@
 Import this script in *root* build file:
 
 subprojects {
-    apply from: "${rootDir}/libraries/GradleBuild/checks.gradle"
+    apply from: "$rootDir/gradle/scripts/checks.gradle"
 }
 
 Note, that you should use at least Gradle v2.11 (as set in gradle/gradle-wrapper.properties).
@@ -32,8 +32,8 @@ afterEvaluate {
         lintOptions {
             abortOnError false // Errors report will be generated and shown by Jenkins
 
-            htmlOutput file("${REPORTS_DIR}/lint/lint-results.html")
-            xmlOutput file("${REPORTS_DIR}/lint/lint-results.xml")
+            htmlOutput file("$REPORTS_DIR/lint/lint-results.html")
+            xmlOutput file("$REPORTS_DIR/lint/lint-results.xml")
 
             // Overriding lintConfig method to apply severity levels from lint config file
             // to 'lintOptions' object, to be applied by Android Studio (which ignores config file)
@@ -49,7 +49,7 @@ afterEvaluate {
                 }
             }
 
-            lintConfig file("${rootDir}/libraries/GradleBuild/checks/lint.xml")
+            lintConfig file("$rootDir/gradle/scripts/checks/lint.xml")
         }
     }
 }
@@ -62,7 +62,7 @@ apply plugin: 'checkstyle'
 checkstyle {
     // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
     toolVersion = '8.25'
-    configFile file("${rootDir}/libraries/GradleBuild/checks/checkstyle.xml")
+    configFile file("$rootDir/gradle/scripts/checks/checkstyle.xml")
     showViolations = false
 }
 
@@ -74,10 +74,10 @@ task checkstyle(type: Checkstyle) {
     classpath = files()
     reports {
         html {
-            destination file("${REPORTS_DIR}/checkstyle/checkstyle-result.html")
+            destination file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
         }
         xml {
-            destination file("${REPORTS_DIR}/checkstyle/checkstyle-result.xml")
+            destination file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
         }
     }
     ignoreFailures = true // Errors report will be generated and shown by Jenkins

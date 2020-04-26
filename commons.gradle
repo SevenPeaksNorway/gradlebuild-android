@@ -1,7 +1,7 @@
 /*
 Usage example:
 
-apply from: "${rootDir}/libraries/GradleBuild/commons.gradle"
+apply from: "$rootDir/gradle/scripts/commons.gradle"
 
 android {
     defaultConfig {
@@ -24,10 +24,10 @@ android {
     // Setting up default signing config
     signingConfigs {
         debug {
-            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+            storeFile file("$rootDir/gradle/scripts/sign/debug.keystore")
         }
         release {
-            storeFile file("${rootDir}/libraries/GradleBuild/sign/debug.keystore")
+            storeFile file("$rootDir/gradle/scripts/sign/debug.keystore")
             keyAlias 'androiddebugkey'
             storePassword 'debug'
             keyPassword 'debug'
@@ -77,14 +77,14 @@ ext.appVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
-    log "VERSION  | Base name: ${version}"
-    log "VERSION  | Base code: ${baseCode}"
-    log "VERSION  | Build number: ${buildNumber}"
+    log "VERSION  | Base name: $version"
+    log "VERSION  | Base code: $baseCode"
+    log "VERSION  | Build number: $buildNumber"
 
     android.defaultConfig.with {
         versionName version
         versionCode baseCode
-        buildConfigField 'int', 'BUILD_NUMBER', "${buildNumber}"
+        buildConfigField 'int', 'BUILD_NUMBER', "$buildNumber"
     }
 
     // We also need to fine-tune version name and code for different cases
@@ -101,14 +101,14 @@ ext.appVersion = { version ->
 
         def suffixes = variant.productFlavors.collect { it.versionNameSuffix } +
                 variant.buildType.versionNameSuffix
-        def suffix = suffixes.findAll { it != null }.join("")
+        def suffix = suffixes.findAll { it != null }.join('')
         def baseVersion = version + suffix
 
         if (variant.buildType.name.contains('release')) {
             versionName = baseVersion
             versionCode = baseCode + buildNumber
         } else if (isOnBuildServer()) {
-            versionName = "${baseVersion}-b${buildNumber}"
+            versionName = "$baseVersion-b$buildNumber"
             versionCode = baseCode + buildNumber
         } else {
             // Debug builds on local machine
@@ -116,17 +116,17 @@ ext.appVersion = { version ->
             versionCode = baseCode
         }
 
-        log "VERSION  | ${variant.name} = ${versionName} / ${versionCode}"
+        log "VERSION  | ${variant.name} = $versionName / $versionCode"
 
         // Rewriting version name and code for each output and setting apk file name
         variant.outputs.each { output ->
             output.versionCodeOverride = versionCode
             output.versionNameOverride = versionName
-            output.outputFileName = "${outputFileAppName}-${output.baseName}-${versionName}.apk"
+            output.outputFileName = "$outputFileAppName-${output.baseName}-$versionName.apk"
         }
 
         // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
-        variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"${versionName}\""
+        variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"$versionName\""
     }
 }
 
@@ -139,11 +139,11 @@ private static int getBaseVersionCode(String version) {
     // Since version code is an integer we are limited with 21.47.48.3647 (max int).
     def (major, minor, patch) = version.tokenize('.')
     if (major.toInteger() > 20) {
-        throw new GradleException("Major part of version name cannot be bigger than 20")
+        throw new GradleException('Major part of version name cannot be bigger than 20')
     } else if (minor.toInteger() > 99) {
-        throw new GradleException("Minor part of version name cannot be bigger than 99")
+        throw new GradleException('Minor part of version name cannot be bigger than 99')
     } else if (patch.toInteger() > 99) {
-        throw new GradleException("Patch part of version name cannot be bigger than 99")
+        throw new GradleException('Patch part of version name cannot be bigger than 99')
     }
     return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
 }
@@ -212,10 +212,10 @@ ext.enableAppNameLogic = {
         if (appName != null) {
             def suffixes = variant.productFlavors.collect { appNameSuffixes.get(it.name) } +
                     appNameSuffixes.get(variant.buildType.name)
-            def suffix = suffixes.findAll { it != null }.join("")
+            def suffix = suffixes.findAll { it != null }.join('')
             appName += suffix
 
-            log "APP NAME | ${variant.name} = ${appName}"
+            log "APP NAME | ${variant.name} = $appName"
             resValue 'string', 'app_name', appName
         }
     }
@@ -350,7 +350,7 @@ ext.isOnBuildServer = {
  * "setStringField it, 'NAME', 'VALUE'".
  */
 ext.setStringField = { obj, key, value ->
-    obj.buildConfigField 'String', key, "\"${value}\""
+    obj.buildConfigField 'String', key, "\"$value\""
 }
 
 /**
@@ -360,7 +360,7 @@ ext.setStringField = { obj, key, value ->
  * "setBooleanField it, 'NAME', value".
  */
 ext.setBooleanField = { obj, key, value ->
-    obj.buildConfigField 'Boolean', key, value ? "true" : "false"
+    obj.buildConfigField 'Boolean', key, value ? 'true' : 'false'
 }
 
 /**
@@ -374,7 +374,7 @@ ext.setStringRes = { obj, key, value ->
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != "false"
+    return System.properties.VERBOSE != 'false'
 }
 
 private static void log(String message) {

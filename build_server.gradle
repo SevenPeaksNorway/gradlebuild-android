@@ -3,7 +3,7 @@ This script will automatically set up 'ci' task that can be used on build server
 build parameter to trigger all necessary tasks.
 
 Usage example in build.gradle:
-apply from: "${rootDir}/libraries/GradleBuild/build_server.gradle"
+apply from: "$rootDir/gradle/scripts/build_server.gradle"
  */
 
 /*
@@ -63,7 +63,7 @@ project.afterEvaluate {
 
                     fbUploadTask.doLast {
                         // Notifying that changelog is uploaded, if needed
-                        if (isOnBuildServer && project.ext.has("onChangelogUploaded")) {
+                        if (isOnBuildServer && project.ext.has('onChangelogUploaded')) {
                             onChangelogUploaded()
                         }
                     }
@@ -77,7 +77,7 @@ project.afterEvaluate {
 if (hasProperty('play')) {
     play {
         track = 'alpha'
-        resolutionStrategy = "ignore"
+        resolutionStrategy = 'ignore'
     }
 }
 
@@ -174,7 +174,7 @@ private static String toCamelCase(String snakeCase) {
 private static boolean isMasterBranch() {
     try {
         def commit = 'git rev-parse HEAD'.execute().text.trim()
-        def final branch = "git branch -r --contains ${commit}".execute().text.trim()
+        def final branch = "git branch -r --contains $commit".execute().text.trim()
         log "BUILD | Branch(es): \"${branch.replaceAll("\\s*\n\\s*", "\", \"")}\""
         return branch.find('(?m)/master$')
     } catch (Exception ignored) {
@@ -184,7 +184,7 @@ private static boolean isMasterBranch() {
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != "false"
+    return System.properties.VERBOSE != 'false'
 }
 
 private static void log(String message) {
