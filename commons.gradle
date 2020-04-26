@@ -122,7 +122,7 @@ ext.appVersion = { version ->
         variant.outputs.each { output ->
             output.versionCodeOverride = versionCode
             output.versionNameOverride = versionName
-            output.outputFileName = "$outputFileAppName-${output.baseName}-$versionName.apk"
+            output.outputFileName = "$outputFileAppName-${output.baseName}-${versionName}.apk"
         }
 
         // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
