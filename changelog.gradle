@@ -1,3 +1,7 @@
+/*
+Deprecated. On new Jenkins use CHANGELOG env variable (if Jenkinsfile is properly configured)
+ */
+
 String changelogCached
 
 /**
@@ -72,7 +76,7 @@ private String getVcsPropsFileName() {
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != "false"
+    return System.properties.VERBOSE == 'true'
 }
 
 private static void log(String message) {

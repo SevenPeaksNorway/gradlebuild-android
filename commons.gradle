@@ -45,6 +45,15 @@ android {
     }
 }
 
+// Adding umbrella app distribution task for all flavors
+project.afterEvaluate {
+    def uploadAll = rootProject.task 'appDistributionUploadAll'
+    tasks.forEach { task ->
+        if (task.name ==~ /appDistributionUpload.*Debug/) uploadAll.dependsOn task
+    }
+}
+
+
 String outputFileAppName = 'app'
 
 /**
@@ -238,7 +247,6 @@ ext.enableCrashlytics = {
 
 private static setCrashlyticsEnabled(config, enabled) {
     config.buildConfigField 'Boolean', 'IS_CRASHLYTICS_ENABLED', enabled ? 'true' : 'false'
-    config.manifestPlaceholders = [crashReportingEnabled: enabled ?: false]
 }
 
 /**
@@ -301,7 +309,7 @@ ext.addVendorFlavors = {
         }
 
         // Adding new flavor dimension
-        flavorDimensions ((dimens + 'vendor') as String[])
+        flavorDimensions((dimens + 'vendor') as String[])
 
         // Adding extra flavors
         productFlavors {
@@ -374,7 +382,7 @@ ext.setStringRes = { obj, key, value ->
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != 'false'
+    return System.properties.VERBOSE == 'true'
 }
 
 private static void log(String message) {

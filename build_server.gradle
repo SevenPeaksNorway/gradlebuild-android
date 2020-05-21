@@ -184,7 +184,7 @@ private static boolean isMasterBranch() {
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != 'false'
+    return System.properties.VERBOSE == 'true'
 }
 
 private static void log(String message) {
