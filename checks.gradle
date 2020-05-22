@@ -22,11 +22,13 @@ checkstyle {
 
 def final REPORTS_DIR = 'build/reports'
 
-task 'checkAll'
+/* --------------- */
+/* Lint            */
+/* --------------- */
 
-// Lint
+project.afterEvaluate {
+    if (!project.hasProperty('android')) return
 
-afterEvaluate {
     android {
         // http://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.LintOptions.html
         lintOptions {
@@ -55,38 +57,9 @@ afterEvaluate {
 }
 
 
-// Checkstyle
-
-apply plugin: 'checkstyle'
-
-checkstyle {
-    // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
-    toolVersion = '8.25'
-    configFile file("$rootDir/gradle/scripts/checks/checkstyle.xml")
-    showViolations = false
-}
-
-task checkstyle(type: Checkstyle) {
-    // https:docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.Checkstyle.html
-    source 'src'
-    include '**/*.java', '**/*.xml'
-    exclude '**/gen/**'
-    classpath = files()
-    reports {
-        html {
-            destination file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
-        }
-        xml {
-            destination file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
-        }
-    }
-    ignoreFailures = true // Errors report will be generated and shown by Jenkins
-}
-
-tasks['checkAll'].dependsOn 'checkstyle'
-
-
-// Ktlint
+/* --------------- */
+/* Ktlint          */
+/* --------------- */
 
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
 
@@ -104,4 +77,58 @@ ktlint {
     }
 }
 
-tasks['checkAll'].dependsOn 'ktlintCheck'
+
+/* --------------- */
+/* Checkstyle      */
+/* --------------- */
+
+apply plugin: 'checkstyle'
+
+checkstyle {
+    // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
+    toolVersion = '8.25'
+    configFile file("$rootDir/gradle/scripts/checks/checkstyle.xml")
+    showViolations = false
+}
+
+task checkstyle(type: Checkstyle) {
+    // https:docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.Checkstyle.html
+    source 'src'
+    include '**/*.java', '**/*.xml'
+    exclude '**/gen/**'
+    classpath = files()
+    reports {
+        html.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
+        xml.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
+    }
+    ignoreFailures = true // Errors report will be generated and shown by Jenkins
+}
+
+
+/* --------------- */
+/* Extra tasks     */
+/* --------------- */
+
+// Adding umbrella task for all checks
+project.afterEvaluate {
+    def check = rootProject.tasks.maybeCreate('checkAll')
+    check.dependsOn addCheckTasks('Debug')
+    check.dependsOn addCheckTasks('Release')
+}
+
+private def addCheckTasks(String mode) {
+    def check = rootProject.tasks.maybeCreate("check${mode}All")
+    tasks.forEach { task -> addTaskDep(check, task, mode) }
+    tasks.whenTaskAdded { task -> addTaskDep(check, task, mode) }
+    return check
+}
+
+private static def addTaskDep(check, task, mode) {
+    if (task.name ==~ /lint.*${mode}/ ||
+            task.name ==~ /ktlint.*${mode}Check/ ||
+            task.name == 'checkstyle' ||
+            task.name ==~ /test.*${mode}UnitTest/
+    ) {
+        check.dependsOn task
+    }
+}
