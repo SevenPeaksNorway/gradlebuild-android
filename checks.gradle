@@ -34,9 +34,6 @@ project.afterEvaluate {
         lintOptions {
             abortOnError false // Errors report will be generated and shown by Jenkins
 
-            htmlOutput file("$REPORTS_DIR/lint/lint-results.html")
-            xmlOutput file("$REPORTS_DIR/lint/lint-results.xml")
-
             // Overriding lintConfig method to apply severity levels from lint config file
             // to 'lintOptions' object, to be applied by Android Studio (which ignores config file)
             it.metaClass.lintConfig = { File file ->
