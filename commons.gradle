@@ -6,8 +6,8 @@ apply from: "$rootDir/gradle/scripts/commons.gradle"
 android {
     defaultConfig {
         ...
-        setupVersion '1.0.0'
-        setOutputFileName 'app-name'
+        appVersion '1.0.0'
+        outputFileName 'app-name'
     }
     ...
     productFlavors {
@@ -47,9 +47,12 @@ android {
 
 // Adding umbrella app distribution task for all flavors
 project.afterEvaluate {
-    def uploadAll = rootProject.task 'appDistributionUploadAll'
-    tasks.forEach { task ->
-        if (task.name ==~ /appDistributionUpload.*Debug/) uploadAll.dependsOn task
+    def uploadTasks = new ArrayList()
+    tasks.forEach { task -> if (task.name ==~ /appDistributionUpload.*Debug/) uploadTasks += task }
+
+    if (!uploadTasks.isEmpty()) {
+        def uploadAll = rootProject.task 'appDistributionUploadAll'
+        uploadTasks.forEach { task -> uploadAll.dependsOn task }
     }
 }
 
@@ -65,9 +68,6 @@ String outputFileAppName = 'app'
 ext.outputFileName = { name ->
     outputFileAppName = name
 }
-
-// For backward compatibility
-ext.setOutputFileName = ext.outputFileName
 
 /**
  * Sets app version name and version code.
@@ -138,9 +138,6 @@ ext.appVersion = { version ->
         variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"$versionName\""
     }
 }
-
-// For backward compatibility
-ext.setupVersion = ext.appVersion
 
 private static int getBaseVersionCode(String version) {
     // Version code has next format: XYYZZBBBB,
@@ -247,42 +244,6 @@ ext.enableCrashlytics = {
 
 private static setCrashlyticsEnabled(config, enabled) {
     config.buildConfigField 'Boolean', 'IS_CRASHLYTICS_ENABLED', enabled ? 'true' : 'false'
-}
-
-/**
- * Deprecated, use addVendorFlavors instead.
- *
- * Adds and configures new "debugHuawei" and "releaseHuawei" build types.
- * Huawei release build type will be automatically set to use "huawei" sign config (falling back
- * to debug sign config).
- */
-ext.addHuaweiBuildTypes = {
-    // Adding "huawei" signing config if missing
-    if (android.signingConfigs.findByName('huawei') == null) {
-        android.signingConfigs {
-            huawei.initWith debug
-        }
-    }
-
-    android.buildTypes {
-        debugHuawei {
-            initWith debug
-            matchingFallbacks = ['debug']
-
-            applicationIdSuffix '.huawei'
-            appNameSuffix it, ' HW'
-            versionNameSuffix '-hw'
-        }
-        releaseHuawei {
-            initWith release
-            matchingFallbacks = ['release']
-
-            signingConfig android.signingConfigs.huawei
-
-            applicationIdSuffix '.huawei'
-            versionNameSuffix '-hw'
-        }
-    }
 }
 
 /**
