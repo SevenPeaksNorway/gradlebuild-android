@@ -43,6 +43,24 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+
+    // App Distribution default settings
+    defaultConfig {
+        if (hasProperty('firebaseAppDistribution')) {
+            firebaseAppDistribution {
+                groups = System.env.FB_GROUP
+                releaseNotes = System.env.CHANGELOG
+            }
+        }
+    }
+}
+
+// Play distribution default settings
+if (hasProperty('play')) {
+    play {
+        track = System.env.PLAY_TRACK ?: 'alpha'
+        resolutionStrategy = 'ignore'
+    }
 }
 
 // Adding umbrella app distribution task for all flavors
