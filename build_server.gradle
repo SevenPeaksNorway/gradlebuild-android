@@ -1,0 +1,70 @@
+/*
+Usage example:
+
+apply from: "$rootDir/gradle/scripts/build_server.gradle"
+*/
+
+android {
+    // App Distribution default settings
+    defaultConfig {
+        if (this.hasProperty('firebaseAppDistribution')) {
+            firebaseAppDistribution {
+                groups = System.env.FB_GROUP
+                releaseNotes = System.env.CHANGELOG
+            }
+        }
+    }
+}
+
+// Play distribution default settings
+if (hasProperty('play')) {
+    play {
+        track = System.env.PLAY_TRACK ?: 'alpha'
+        resolutionStrategy = 'ignore'
+    }
+}
+
+// Adding umbrella build tasks for all flavors: buildDebugAll & buildReleaseAll
+project.afterEvaluate {
+    def debugAll = rootProject.task 'buildDebugAll'
+    debugAll.dependsOn 'assembleDebug'
+
+    def releaseAll = rootProject.task 'buildReleaseAll'
+    if (android.productFlavors.isEmpty()) {
+        debugAll.dependsOn 'assembleRelease'
+    } else {
+        tasks.forEach { task ->
+            // Huawei does not support app bundles
+            def bundle = System.env.BUILD_BUNDLE && !task.name.contains('Huawei')
+            def prefix = bundle ? "bundle" : "assemble"
+            if (task.name ==~ /${prefix}.+Release/) releaseAll.dependsOn task
+        }
+    }
+}
+
+// Adding umbrella app distribution task for all flavors: appDistributionUploadAll
+project.afterEvaluate {
+    def uploadTasks = new ArrayList()
+    tasks.forEach { task -> if (task.name ==~ /appDistributionUpload.*Debug/) uploadTasks += task }
+
+    if (!uploadTasks.isEmpty()) {
+        def uploadAll = rootProject.task 'appDistributionUploadAll'
+        uploadTasks.forEach { task -> uploadAll.dependsOn task }
+    }
+}
+
+// Adding umbrella play publish task for all flavors: publishAll
+project.afterEvaluate {
+    def publishTasks = new ArrayList()
+    tasks.forEach { task ->
+        // Huawei builds cannot be published
+        def isHuawei = task.name.contains('Huawei')
+        def suffix = System.env.BUILD_BUNDLE ? 'Bundle' : 'Apk'
+        if (!isHuawei && task.name ==~ /publish.*Release$suffix/) publishTasks += task
+    }
+
+    if (!publishTasks.isEmpty()) {
+        def publishAll = rootProject.task 'publishAll'
+        publishTasks.forEach { task -> publishAll.dependsOn task }
+    }
+}
