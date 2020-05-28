@@ -27,11 +27,11 @@ if (hasProperty('play')) {
 // Adding umbrella build tasks for all flavors: buildDebugAll & buildReleaseAll
 project.afterEvaluate {
     def debugAll = rootProject.task 'buildDebugAll'
-    debugAll.dependsOn 'assembleDebug'
+    tasks.forEach { task -> if (task.name == 'assembleDebug') debugAll.dependsOn task }
 
     def releaseAll = rootProject.task 'buildReleaseAll'
     if (android.productFlavors.isEmpty()) {
-        debugAll.dependsOn 'assembleRelease'
+        tasks.forEach { task -> if (task.name == 'assembleRelease') releaseAll.dependsOn task }
     } else {
         tasks.forEach { task ->
             // Huawei does not support app bundles
