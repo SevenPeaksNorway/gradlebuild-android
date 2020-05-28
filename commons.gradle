@@ -198,6 +198,11 @@ ext.enableAppNameLogic = {
     if (appNameEnabled) return
     appNameEnabled = true
 
+    // Adding default string to avoid false positive IDE errors
+    android.defaultConfig {
+        resValue 'string', 'app_name', appNameBase ?: ''
+    }
+
     android.applicationVariants.whenObjectAdded { variant ->
         def appName = variant.productFlavors.collect { appNames.get(it.name) }.find { it != null }
                 ?: appNames.get(variant.buildType.name)
