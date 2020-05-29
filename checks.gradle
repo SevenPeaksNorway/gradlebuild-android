@@ -83,7 +83,7 @@ apply plugin: 'checkstyle'
 
 checkstyle {
     // https://docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.CheckstyleExtension.html
-    toolVersion = '8.25'
+    toolVersion = '8.32'
     configFile file("$rootDir/gradle/scripts/checks/checkstyle.xml")
     showViolations = false
 }
