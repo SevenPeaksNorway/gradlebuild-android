@@ -73,7 +73,7 @@
         <module name="RightCurly">
             <property name="option" value="alone" />
             <property name="tokens"
-                value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO,
+                value="CLASS_DEF, METHOD_DEF, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO,
                 STATIC_INIT, INSTANCE_INIT" />
         </module>
 
@@ -111,7 +111,7 @@
             <property name="separateLineBetweenGroups" value="false" />
             <property name="customImportOrderRules"
                 value="SPECIAL_IMPORTS###STANDARD_JAVA_PACKAGE###THIRD_PARTY_PACKAGE###STATIC" />
-            <property name="specialImportsRegExp" value="^(android|com|junit|net|org)\." />
+            <property name="specialImportsRegExp" value="^(android|androidx|com|junit|net|org)\." />
             <property name="standardPackageRegExp" value="^(java|javax)\." />
         </module>
         <module name="IllegalImport" />
