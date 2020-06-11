@@ -37,7 +37,7 @@
 
     <module name="LineLength">
         <property name="max" value="100" />
-        <property name="fileExtensions" value="java"/>
+        <property name="fileExtensions" value="java" />
     </module>
 
     <module name="TreeWalker">
@@ -72,9 +72,8 @@
         <module name="RightCurly" />
         <module name="RightCurly">
             <property name="option" value="alone" />
-            <property name="tokens"
-                value="CLASS_DEF, METHOD_DEF, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO,
-                STATIC_INIT, INSTANCE_INIT" />
+            <property name="tokens" value="CLASS_DEF, METHOD_DEF, LITERAL_FOR, LITERAL_WHILE,
+                LITERAL_DO, STATIC_INIT, INSTANCE_INIT" />
         </module>
 
 
@@ -106,16 +105,15 @@
         <!-- Checks for imports.                             -->
         <!-- See http://checkstyle.sf.net/config_import.html -->
         <module name="AvoidStarImport" />
-        <module name="CustomImportOrder">
-            <property name="sortImportsInGroupAlphabetically" value="true" />
-            <property name="separateLineBetweenGroups" value="false" />
-            <property name="customImportOrderRules"
-                value="SPECIAL_IMPORTS###STANDARD_JAVA_PACKAGE###THIRD_PARTY_PACKAGE###STATIC" />
-            <property name="specialImportsRegExp" value="^(android|androidx|com|junit|net|org)\." />
-            <property name="standardPackageRegExp" value="^(java|javax)\." />
+        <module name="ImportOrder">
+            <property name="groups" value="android,androidx,com,junit,net,org,java,javax" />
+            <property name="ordered" value="true" />
+            <property name="separated" value="true" />
+            <property name="option" value="bottom" />
         </module>
         <module name="IllegalImport" />
         <module name="RedundantImport" />
+        <module name="UnusedImports" />
 
 
         <!-- Checks for javadoc comments.                     -->
