@@ -35,8 +35,8 @@ project.afterEvaluate {
     } else {
         tasks.forEach { task ->
             // Huawei does not support app bundles
-            def bundle = System.env.BUILD_BUNDLE && !task.name.contains('Huawei')
-            def prefix = bundle ? "bundle" : "assemble"
+            def bundle = isBundleRequested() && !task.name.contains('Huawei')
+            def prefix = bundle ? 'bundle' : 'assemble'
             if (task.name ==~ /${prefix}.+Release/) releaseAll.dependsOn task
         }
     }
@@ -59,7 +59,7 @@ project.afterEvaluate {
     tasks.forEach { task ->
         // Huawei builds cannot be published
         def isHuawei = task.name.contains('Huawei')
-        def suffix = System.env.BUILD_BUNDLE ? 'Bundle' : 'Apk'
+        def suffix = isBundleRequested() ? 'Bundle' : 'Apk'
         if (!isHuawei && task.name ==~ /publish.*Release$suffix/) publishTasks += task
     }
 
@@ -67,4 +67,8 @@ project.afterEvaluate {
         def publishAll = rootProject.task 'publishAll'
         publishTasks.forEach { task -> publishAll.dependsOn task }
     }
+}
+
+private static boolean isBundleRequested() {
+    return 'true'.equalsIgnoreCase(System.env.BUILD_BUNDLE)
 }
