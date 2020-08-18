@@ -46,6 +46,7 @@ android {
 }
 
 String outputFileAppName = 'app'
+String outputFileVersionSuffix = ''
 
 /**
  * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
@@ -55,6 +56,11 @@ String outputFileAppName = 'app'
  */
 ext.outputFileName = { name ->
     outputFileAppName = name
+
+    android.defaultConfig.with {
+        // Setting output file name for bundles (.aab)
+        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
+    }
 }
 
 /**
@@ -74,6 +80,8 @@ ext.appVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
+    outputFileVersionSuffix = "-$version-b$buildNumber"
+
     log "VERSION  | Base name: $version"
     log "VERSION  | Base code: $baseCode"
     log "VERSION  | Build number: $buildNumber"
@@ -82,6 +90,8 @@ ext.appVersion = { version ->
         versionName version
         versionCode baseCode
         buildConfigField 'int', 'BUILD_NUMBER', "$buildNumber"
+        // Setting output file name for bundles (.aab)
+        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
     }
 
     // We also need to fine-tune version name and code for different cases
@@ -93,14 +103,13 @@ ext.appVersion = { version ->
         // When building on build server (and distributing with Fabric) it is important to include
         // build number in version name to make it easier for testers to provide exact build number
 
-        String versionName
-        Integer versionCode
-
         def suffixes = variant.productFlavors.collect { it.versionNameSuffix } +
                 variant.buildType.versionNameSuffix
         def suffix = suffixes.findAll { it != null }.join('')
         def baseVersion = version + suffix
 
+        String versionName
+        Integer versionCode
         if (variant.buildType.name.contains('release')) {
             versionName = baseVersion
             versionCode = baseCode + buildNumber
@@ -119,7 +128,9 @@ ext.appVersion = { version ->
         variant.outputs.each { output ->
             output.versionCodeOverride = versionCode
             output.versionNameOverride = versionName
-            output.outputFileName = "$outputFileAppName-${output.baseName}-${versionName}.apk"
+            // Setting output file name for apks
+            output.outputFileName =
+                    "$outputFileAppName-$version-b$buildNumber-${output.baseName}.apk"
         }
 
         // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
