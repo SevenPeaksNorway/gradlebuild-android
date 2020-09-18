@@ -6,8 +6,8 @@ apply from: "$rootDir/gradle/scripts/commons.gradle"
 android {
     defaultConfig {
         ...
-        setupVersion '1.0.0'
-        setOutputFileName 'app-name'
+        appVersion '1.0.0'
+        outputFileName 'app-name'
     }
     ...
     productFlavors {
@@ -46,6 +46,7 @@ android {
 }
 
 String outputFileAppName = 'app'
+String outputFileVersionSuffix = ''
 
 /**
  * Sets better apk file name using format: "'appName'-'buildType'-'flavor'-'versionName'.apk".
@@ -55,10 +56,12 @@ String outputFileAppName = 'app'
  */
 ext.outputFileName = { name ->
     outputFileAppName = name
-}
 
-// For backward compatibility
-ext.setOutputFileName = ext.outputFileName
+    android.defaultConfig.with {
+        // Setting output file name for bundles (.aab)
+        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
+    }
+}
 
 /**
  * Sets app version name and version code.
@@ -77,6 +80,8 @@ ext.appVersion = { version ->
     def final buildNumber = getBuildNumber()
     def final baseCode = getBaseVersionCode(version)
 
+    outputFileVersionSuffix = "-$version-b$buildNumber"
+
     log "VERSION  | Base name: $version"
     log "VERSION  | Base code: $baseCode"
     log "VERSION  | Build number: $buildNumber"
@@ -85,6 +90,8 @@ ext.appVersion = { version ->
         versionName version
         versionCode baseCode
         buildConfigField 'int', 'BUILD_NUMBER', "$buildNumber"
+        // Setting output file name for bundles (.aab)
+        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
     }
 
     // We also need to fine-tune version name and code for different cases
@@ -96,14 +103,13 @@ ext.appVersion = { version ->
         // When building on build server (and distributing with Fabric) it is important to include
         // build number in version name to make it easier for testers to provide exact build number
 
-        String versionName
-        Integer versionCode
-
         def suffixes = variant.productFlavors.collect { it.versionNameSuffix } +
                 variant.buildType.versionNameSuffix
         def suffix = suffixes.findAll { it != null }.join('')
         def baseVersion = version + suffix
 
+        String versionName
+        Integer versionCode
         if (variant.buildType.name.contains('release')) {
             versionName = baseVersion
             versionCode = baseCode + buildNumber
@@ -122,16 +128,15 @@ ext.appVersion = { version ->
         variant.outputs.each { output ->
             output.versionCodeOverride = versionCode
             output.versionNameOverride = versionName
-            output.outputFileName = "$outputFileAppName-${output.baseName}-${versionName}.apk"
+            // Setting output file name for apks
+            output.outputFileName =
+                    "$outputFileAppName-$version-b$buildNumber-${output.baseName}.apk"
         }
 
         // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
         variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"$versionName\""
     }
 }
-
-// For backward compatibility
-ext.setupVersion = ext.appVersion
 
 private static int getBaseVersionCode(String version) {
     // Version code has next format: XYYZZBBBB,
@@ -204,6 +209,11 @@ ext.enableAppNameLogic = {
     if (appNameEnabled) return
     appNameEnabled = true
 
+    // Adding default string to avoid false positive IDE errors
+    android.defaultConfig {
+        resValue 'string', 'app_name', appNameBase ?: ''
+    }
+
     android.applicationVariants.whenObjectAdded { variant ->
         def appName = variant.productFlavors.collect { appNames.get(it.name) }.find { it != null }
                 ?: appNames.get(variant.buildType.name)
@@ -238,43 +248,6 @@ ext.enableCrashlytics = {
 
 private static setCrashlyticsEnabled(config, enabled) {
     config.buildConfigField 'Boolean', 'IS_CRASHLYTICS_ENABLED', enabled ? 'true' : 'false'
-    config.manifestPlaceholders = [crashReportingEnabled: enabled ?: false]
-}
-
-/**
- * Deprecated, use addVendorFlavors instead.
- *
- * Adds and configures new "debugHuawei" and "releaseHuawei" build types.
- * Huawei release build type will be automatically set to use "huawei" sign config (falling back
- * to debug sign config).
- */
-ext.addHuaweiBuildTypes = {
-    // Adding "huawei" signing config if missing
-    if (android.signingConfigs.findByName('huawei') == null) {
-        android.signingConfigs {
-            huawei.initWith debug
-        }
-    }
-
-    android.buildTypes {
-        debugHuawei {
-            initWith debug
-            matchingFallbacks = ['debug']
-
-            applicationIdSuffix '.huawei'
-            appNameSuffix it, ' HW'
-            versionNameSuffix '-hw'
-        }
-        releaseHuawei {
-            initWith release
-            matchingFallbacks = ['release']
-
-            signingConfig android.signingConfigs.huawei
-
-            applicationIdSuffix '.huawei'
-            versionNameSuffix '-hw'
-        }
-    }
 }
 
 /**
@@ -301,7 +274,7 @@ ext.addVendorFlavors = {
         }
 
         // Adding new flavor dimension
-        flavorDimensions ((dimens + 'vendor') as String[])
+        flavorDimensions((dimens + 'vendor') as String[])
 
         // Adding extra flavors
         productFlavors {
@@ -374,7 +347,7 @@ ext.setStringRes = { obj, key, value ->
 }
 
 private static boolean verbose() {
-    return System.properties.VERBOSE != 'false'
+    return System.properties.VERBOSE == 'true'
 }
 
 private static void log(String message) {
