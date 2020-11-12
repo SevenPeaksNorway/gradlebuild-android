@@ -19,8 +19,7 @@ android {
 // Play distribution default settings
 if (hasProperty('play')) {
     play {
-        track = System.env.PLAY_TRACK ?: 'alpha'
-        resolutionStrategy = 'ignore'
+        track.set(System.env.PLAY_TRACK ?: 'alpha')
     }
 }
 
