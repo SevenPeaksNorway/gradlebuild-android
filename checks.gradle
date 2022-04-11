@@ -129,3 +129,8 @@ private static def addTaskDep(check, task, mode) {
         check.dependsOn task
     }
 }
+
+// pre build run ktlintFormat
+ext.addLintFormatPreBuild = {
+    tasks.getByPath("preBuild").dependsOn(ktlintFormat)
+}
