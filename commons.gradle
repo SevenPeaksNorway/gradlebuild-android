@@ -118,8 +118,8 @@ ext.appVersion = { version ->
             versionCode = baseCode + buildNumber
         } else {
             // Debug builds on local machine
-            versionName = baseVersion
-            versionCode = baseCode
+            versionName = "$baseVersion-b$buildNumber"
+            versionCode = baseCode + buildNumber
         }
 
         log "VERSION  | ${variant.name} = $versionName / $versionCode"
