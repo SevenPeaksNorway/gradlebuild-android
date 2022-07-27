@@ -254,7 +254,7 @@ ext.addReleaseNotes = { note ->
     def changeLog
     def previousNote = note == null ? "" : "$note\n"
     try {
-        changeLog = "git log origin..HEAD --pretty='%s'".execute().text.trim()
+        changeLog = "git log master..HEAD --pretty='%s'".execute().text.trim()
     } catch (Exception ignored) {
         return note
     }
