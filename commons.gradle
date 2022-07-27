@@ -246,6 +246,29 @@ ext.enableCrashlytics = {
     }
 }
 
+/**
+ * Add release note to firebase app distribution
+ * Release note will contain all the commit that has been made after this branch has been created
+ * */
+ext.addReleaseNotes = { note ->
+    def changeLog
+    def previousNote = note == null ? "" : "$note\n"
+    try {
+        changeLog = "git log origin..HEAD --pretty='%s'".execute().text.trim()
+    } catch (Exception ignored) {
+        return note
+    }
+    println "Change Log => \n$changeLog"
+
+    android.defaultConfig.with {
+        if (this.hasProperty('firebaseAppDistribution')) {
+            firebaseAppDistribution {
+                releaseNotes = "$previousNote ${changeLog.toString()}"
+            }
+        }
+    }
+}
+
 private static setCrashlyticsEnabled(config, enabled) {
     config.buildConfigField 'Boolean', 'IS_CRASHLYTICS_ENABLED', enabled ? 'true' : 'false'
 }
