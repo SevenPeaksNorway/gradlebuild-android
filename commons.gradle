@@ -251,10 +251,22 @@ ext.enableCrashlytics = {
  * Release note will contain all the commit that has been made after this branch has been created
  * */
 ext.addReleaseNotes = { note ->
-    def changeLog
+    def changeLog = ""
     def previousNote = note == null ? "" : "$note\n"
     try {
-        changeLog = "git log --pretty='%s'".execute().text.trim()
+        def branchName = "git branch | grep '^*' | sed 's/* //'".execute().text.trim()
+        def changeLogs = "git log $branchName --pretty='%s' --max-count=25".execute().text.trim().split('\n')
+        def merges = "git log $branchName --pretty='%s' --max-count=3".execute().text.trim().split('\n')
+        def set = new Set<String>()
+        for(int i = 0; i < merges.size(); i++) {
+            set.append(merges[i])
+        }
+        for(int i = 0; i<changeLogs.size(); i++) {
+            if(set.contains(changeLogs[i]) && i > 0) {
+                if (i > 0) break else continue
+            }
+            changeLog+="\n"+changeLogs[i]
+        }
     } catch (Exception ignored) {
         return note
     }
@@ -267,6 +279,10 @@ ext.addReleaseNotes = { note ->
             }
         }
     }
+}
+
+tasks.register('releaseNote') {
+    addReleaseNotes()
 }
 
 private static setCrashlyticsEnabled(config, enabled) {
