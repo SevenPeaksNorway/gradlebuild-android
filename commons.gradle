@@ -263,7 +263,7 @@ ext.addReleaseNotes = { note ->
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
-                releaseNotes = "$previousNote ${changeLog.toString()}"
+                releaseNotes = "$previousNote${changeLog.toString()}"
             }
         }
     }
