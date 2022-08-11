@@ -254,23 +254,20 @@ ext.addReleaseNotes = { note ->
     def changeLog = ""
     def previousNote = note == null ? "" : "$note\n"
     try {
-        /*def changeLogs = "git log --pretty='%s' --max-count=50".execute().text.trim().split('\n')
-        def merges = "git log --pretty='%s' --max-count=3 --merges".execute().text.trim().split('\n')
+        def changeLogs = "git log --pretty='%s' --max-count=50".execute().text.trim().split('\n')
+        def merges = "git log --pretty='%s' --max-count=10 --merges".execute().text.trim().split('\n')
         def set = new HashSet<String>()
         for(int i = 0; i < merges.size(); i++) {
-            println merges[i]
+            if(merges[i].contains("(pull request #"))
             set.add(merges[i])
+            if (set.size() > 2) break
         }
         for(int i = 0; i<changeLogs.size(); i++) {
             if(set.contains(changeLogs[i]) && i > 0) {
                 if (i > 0) break else continue
             }
-            println changeLogs[i]
             changeLog+="\n"+changeLogs[i]
-        }*/
-        def branch = "git branch".execute().text.trim()
-        println "Branches => $branch"
-        changeLog = "git log \$(git merge-base master azure-pipelines)..azure-pipelines --pretty='%s'".execute().text.trim()
+        }
     } catch (Exception ignored) {
         println "Change Log ex=> \n$ignored"
         return note
