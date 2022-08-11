@@ -268,7 +268,7 @@ ext.addReleaseNotes = { note ->
                 if (i > 0) break else continue
             }
             if (!changeLogSet.contains(changeLogs[i])) {
-                changeLog+="\n"+changeLogs[i]
+                changeLog+=changeLogs[i]+"\n"
                 changeLogSet.add(changeLogs[i])
             }
         }
@@ -281,7 +281,7 @@ ext.addReleaseNotes = { note ->
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
-                releaseNotes = "$previousNote${changeLog.toString()}"
+                releaseNotes = "$previousNote${changeLog.toString().trim()}"
             }
         }
     }
