@@ -254,15 +254,13 @@ ext.addReleaseNotes = { note ->
     def changeLog = ""
     def previousNote = note == null ? "" : "$note\n"
     try {
-        def changeLogs = "git log --pretty='%s' --max-count=25".execute().text.trim().split('\n')
+        def changeLogs = "git log --pretty='%s' --max-count=50".execute().text.trim().split('\n')
         def merges = "git log --pretty='%s' --max-count=3 --merges".execute().text.trim().split('\n')
         def set = new HashSet<String>()
-        println "Change Log merges=>\n"
         for(int i = 0; i < merges.size(); i++) {
             println merges[i]
             set.add(merges[i])
         }
-        println "Change Logs=>\n"
         for(int i = 0; i<changeLogs.size(); i++) {
             if(set.contains(changeLogs[i]) && i > 0) {
                 if (i > 0) break else continue
