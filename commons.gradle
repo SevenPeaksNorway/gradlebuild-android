@@ -262,7 +262,7 @@ ext.addReleaseNotes = { note ->
         println "Change Log merges=>\n"
         for(int i = 0; i < merges.size(); i++) {
             println merges[i]
-            set.append(merges[i])
+            set.add(merges[i])
         }
         println "Change Logs=>\n"
         for(int i = 0; i<changeLogs.size(); i++) {
