@@ -255,19 +255,25 @@ ext.addReleaseNotes = { note ->
     def previousNote = note == null ? "" : "$note\n"
     try {
         def branchName = "git branch | grep '^*' | sed 's/* //'".execute().text.trim()
+        println "Branch name => $branchName"
         def changeLogs = "git log $branchName --pretty='%s' --max-count=25".execute().text.trim().split('\n')
         def merges = "git log $branchName --pretty='%s' --max-count=3".execute().text.trim().split('\n')
         def set = new HashSet<String>()
+        println "Change Log merges=>\n"
         for(int i = 0; i < merges.size(); i++) {
+            println merges[i]
             set.append(merges[i])
         }
+        println "Change Logs=>\n"
         for(int i = 0; i<changeLogs.size(); i++) {
             if(set.contains(changeLogs[i]) && i > 0) {
                 if (i > 0) break else continue
             }
+            println changeLogs[i]
             changeLog+="\n"+changeLogs[i]
         }
     } catch (Exception ignored) {
+        println "Change Log ex=> \n$ignored"
         return note
     }
     println "Change Log => \n$changeLog"
