@@ -262,14 +262,18 @@ ext.addReleaseNotes = { note ->
             set.add(merges[i])
             if (set.size() > 2) break
         }
+        def changeLogSet = new HashSet<String>()
         for(int i = 0; i<changeLogs.size(); i++) {
             if(set.contains(changeLogs[i]) && i > 0) {
                 if (i > 0) break else continue
             }
-            changeLog+="\n"+changeLogs[i]
+            if (!changeLogSet.contains(changeLogs[i])) {
+                changeLog+="\n"+changeLogs[i]
+                changeLogSet.add(changeLogs[i])
+            }
         }
     } catch (Exception ignored) {
-        println "Change Log ex=> \n$ignored"
+        println "Change Log ex=> \n${ignored.message()}"
         return note
     }
     println "Change Log => \n$changeLog"
