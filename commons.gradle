@@ -251,11 +251,29 @@ ext.enableCrashlytics = {
  * Release note will contain all the commit that has been made after this branch has been created
  * */
 ext.addReleaseNotes = { note ->
-    def changeLog
+    def changeLog = ""
     def previousNote = note == null ? "" : "$note\n"
     try {
-        changeLog = "git log".execute().text.trim()
+        def changeLogs = "git log --pretty='%s' --max-count=50".execute().text.trim().split('\n')
+        def merges = "git log --pretty='%s' --max-count=10 --merges".execute().text.trim().split('\n')
+        def set = new HashSet<String>()
+        for(int i = 0; i < merges.size(); i++) {
+            if(merges[i].contains("(pull request #"))
+            set.add(merges[i])
+            if (set.size() > 2) break
+        }
+        def changeLogSet = new HashSet<String>()
+        for(int i = 0; i<changeLogs.size(); i++) {
+            if(set.contains(changeLogs[i]) && i > 0) {
+                if (i > 0) break else continue
+            }
+            if (!changeLogSet.contains(changeLogs[i])) {
+                changeLog+=changeLogs[i]+"\n"
+                changeLogSet.add(changeLogs[i])
+            }
+        }
     } catch (Exception ignored) {
+        println "Change Log ex=> \n${ignored.message()}"
         return note
     }
     println "Change Log => \n$changeLog"
@@ -263,10 +281,14 @@ ext.addReleaseNotes = { note ->
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
-                releaseNotes = "$previousNote ${changeLog.toString()}"
+                releaseNotes = "$previousNote${changeLog.toString().trim()}"
             }
         }
     }
+}
+
+tasks.register('releaseNote') {
+    addReleaseNotes()
 }
 
 private static setCrashlyticsEnabled(config, enabled) {
