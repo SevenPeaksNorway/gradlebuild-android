@@ -5,8 +5,6 @@
 
     <issue id="LogConditional" severity="warning" />
 
-    <issue id="ContentDescription" severity="ignore" />
-
     <issue id="GoogleAppIndexingWarning" severity="ignore" />
 
     <issue id="LockedOrientationActivity" severity="ignore" />
