@@ -254,7 +254,7 @@ ext.addReleaseNotes = { note ->
     def changeLog = ""
     def previousNote = note == null ? "" : "$note\n"
     try {
-        def changeLogs = "git log --pretty='%s' --max-count=50".execute().text.trim().split('\n')
+        def changeLogs = "git log --first-parent --max-count=1 --pretty='%b' |grep -e feature/ -e bugfix/ -e refactor/".execute().text.trim().split('\n')
         def notesSet = new HashSet<String>()
         def notesFound = false
         for (int i = 0; i < changeLogs.size(); i++) {
