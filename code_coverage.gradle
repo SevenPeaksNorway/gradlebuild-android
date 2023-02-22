@@ -38,7 +38,7 @@ def sonarExclusions = [
         "**/databinding/**",
         "**/*DataBind*",
         // Database converters and data classes
-        "**/*Converter",
+        "**/*Converter*",
         "**/*Db*",
         // Data directories and data classes
         "**/data/api/responses/*",
@@ -73,7 +73,7 @@ def sonarExclusions = [
         "**/*Broadcaster*",
         "**/*Adapter*",
         "**/*Fragment*",
-        "**/*ViewState",
+        "**/*ViewState*",
         "**/*ViewAction*",
         "**/*ViewEvent*",
         "**/*DiffUtils*",
