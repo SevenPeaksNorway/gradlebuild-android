@@ -252,19 +252,26 @@ ext.enableCrashlytics = {
  * */
 ext.addReleaseNotes = { note ->
     def changeLog = ""
-    def previousNote = note == null ? "" : "$note\n"
+    def changeLogCmd = ""
+    def changeKeys = """feature/
+    bugfix/
+    refactor/
+    """.split('\n')
     try {
-        changeLog = "git log --first-parent --max-count=1 --pretty='%b' |grep -e feature/ -e bugfix/ -e refactor/".execute().text
+        changeLogCmd = "git log --first-parent --max-count=1 --pretty='%b'".execute().text.split('\n')
+        for (word in changeKeys) {
+            changeLog += changeLogCmd.findAll { it.contains(word) }.join('\n');
+        }
     } catch (Exception ignored) {
         println "Change Log ex=> \n${ignored.message()}"
         return note
     }
-    println "Change Log => \n$changeLog"
-
+    println "Change Log => \n${changeLog.trim()}"
+    
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
-                releaseNotes = "$previousNote${changeLog.toString().trim()}"
+                releaseNotes = "${changeLog.toString().trim()}"
             }
         }
     }
