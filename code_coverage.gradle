@@ -1,0 +1,182 @@
+/*
+Usage example:
+
+apply from: "$rootDir/gradle/scripts/code_coverage.gradle"
+
+sonarqube {
+    properties {
+        property "sonar.projectName", "replace_with_project_name"
+        property "sonar.projectKey", "replace_with_project_key
+        property "sonar.login", "replace_with_sonar_login"
+        property "sonar.organization", "replace_with_organization"
+        property "sonar.host.url", "replace_with_host_url"
+    }
+}
+
+Due to difference between Sonarcloud and Kover wildcard rules, there are two lists:
+sonarExclusions - For Sonarcloud. For more information:
+https://docs.sonarcloud.io/advanced-setup/analysis-scope/#wildcard-patterns
+koverExclusions - For Kover code coverage report. For more information:
+https://kotlin.github.io/kotlinx-kover/
+Both of these should have same directories/files.
+*/
+def sonarExclusions = [
+        // Application class
+        "**/*App*",
+        // Generated files
+        "**/*BuildConfig*",
+        "**/*BR*",
+        "**/*Hilt*",
+        "**/*Factory*",
+        "**/*Injector",
+        "**/*Module*",
+        "**/di/*",
+        "**/*Dao*",
+        "**/*Dao_Impl*",
+        "**/*Database*",
+        "**/*Database_Impl*",
+        "**/databinding/**",
+        "**/*DataBind*",
+        // Database converters and data classes
+        "**/*Converter*",
+        "**/*Db*",
+        // Data directories and data classes
+        "**/data/api/responses/*",
+        "**/data/api/errors/*",
+        "**/data/assets/*",
+        "**/data/api/models/*",
+        "**/data/factory/*",
+        "**/data/model/*",
+        "**/data/local/**",
+        "**/data/manager/**",
+        "**/data/remote/**",
+        // Domain directories and data classes
+        "**/domain/model/*",
+        "**/domain/models/*",
+        // Compose themes, components and navigation
+        "**/ui/theme/*",
+        "**/ui/components/**",
+        "**/ui/navigation/**",
+        // Util directories
+        "**/util/ext/*",
+        "**/utils/**",
+        // Custom components
+        "**/custom/**",
+        "**/components/**",
+        "**/ui/bottombar/**",
+        // Compose previews directories
+        "**/preview/*",
+        // Specific files (Fragments, Views, Adapters, etc.)
+        "**/*Activity*",
+        "**/*DataState*",
+        "**/*UIState*",
+        "**/*Destination*",
+        "**/*Screen*",
+        "**/*Broadcaster*",
+        "**/*Adapter*",
+        "**/*Fragment*",
+        "**/*ViewState*",
+        "**/*ViewAction*",
+        "**/*ViewEvent*",
+        "**/*DiffUtils*",
+        "**/*ViewHolder*",
+        "**/*View",
+        "**/*BindableDelegate*",
+        "**/*BindModel*",
+        "**/*Constants*",
+        "**/*BaseRepository*",
+        "**/BaseUseCase.kt",
+        "**/*StatusCode*",
+        "**/*Navigation*",
+]
+def koverExclusions = [
+        // Application class
+        "*App*",
+        // Generated files
+        "*BuildConfig*",
+        "*BR*",
+        "*Hilt*",
+        "*Factory*",
+        "*Injector",
+        "*Module*",
+        "*di.*",
+        "*Dao*",
+        "*Dao_Impl*",
+        "*Database*",
+        "*Database_Impl*",
+        "*databinding*",
+        "*DataBind*",
+        // Database converters and data classes
+        "*Converter",
+        "*Db*",
+        // Data directories and data classes
+        "*data.api.responses*",
+        "*data.api.errors*",
+        "*data.assets*",
+        "*data.api.models.*",
+        "*data.factory*",
+        "*data.model*",
+        "*data.local*",
+        "*data.manager*",
+        "*data.remote*",
+        // Domain directories and data classes
+        "*domain.model*",
+        "*domain.models*",
+        // Compose themes, components and navigation
+        "*ui.theme*",
+        "*ui.components*",
+        "*ui.navigation*",
+        // Util directories
+        "*util.ext*",
+        "*utils*",
+        // Custom components
+        "*custom*",
+        "*components.*",
+        "*ui.bottombar.*",
+        // Compose previews directories
+        "*preview.*",
+        // Specific files (Fragments, Views, Adapters, etc.)
+        "*Activity*",
+        "*DataState*",
+        "*UIState*",
+        "*Destination*",
+        "*Screen*",
+        "*Broadcaster*",
+        "*Adapter*",
+        "*Fragment*",
+        "*ViewState*",
+        "*ViewAction*",
+        "*ViewEvent*",
+        "*DiffUtils*",
+        "*ViewHolder*",
+        "*View",
+        "*BindableDelegate*",
+        "*BindModel*",
+        "*Constants*",
+        "*BaseRepository*",
+        "*BaseUseCase.kt",
+        "*StatusCode*",
+        "*Navigation*"
+]
+
+sonarqube {
+    properties {
+        if (System.getenv("PR_ID") != null) {
+            property("sonar.pullrequest.key", "$System.env.PR_ID")
+            property("sonar.pullrequest.branch", "$System.env.PR_SOURCE")
+            property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
+        }
+        property "sonar.androidLint.reportPaths", "build/reports/lint-results-devDebug.xml"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/merged/xml/report.xml"
+        property "sonar.coverage.exclusions", sonarExclusions
+    }
+}
+
+koverMerged {
+    enable()
+    filters {
+        classes {
+            excludes.addAll(koverExclusions)
+        }
+    }
+}
