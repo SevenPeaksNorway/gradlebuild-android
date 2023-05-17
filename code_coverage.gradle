@@ -172,10 +172,12 @@ sonarqube {
     }
 }
 
-lint {
-    checkDependencies true
-    xmlReport true
-    xmlOutput file("$reportsDir/android-report.xml")
+android {
+    lint {
+        checkDependencies true
+        xmlReport true
+        xmlOutput file("$reportsDir/android-report.xml")
+    }
 }
 
 koverMerged {
