@@ -166,10 +166,16 @@ sonarqube {
             property("sonar.pullrequest.branch", "$System.env.PR_SOURCE")
             property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
         }
-        property "sonar.androidLint.reportPaths", "build/reports/lint-results-devDebug.xml"
-        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/merged/xml/report.xml"
+        property "sonar.androidLint.reportPaths", "$reportsDir/android-report.xml"
+        property "sonar.coverage.jacoco.xmlReportPaths", "$buildDir/kover/merged/xml/report.xml"
         property "sonar.coverage.exclusions", sonarExclusions
     }
+}
+
+lint {
+    checkDependencies true
+    xmlReport true
+    xmlOutput file("$reportsDir/android-report.xml")
 }
 
 koverMerged {
