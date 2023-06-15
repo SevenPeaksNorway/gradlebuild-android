@@ -1,7 +1,21 @@
 /*
 Usage example:
 
+For single module project the code below should be applied to app build.gradle.
+For multi-module project the code below should be applied to project build.gradle.
+
+1. Apply Sonarqube and Kover plugins:
+
+plugins {
+    id 'org.sonarqube' version 'replace_with_recent_version'
+    id 'org.jetbrains.kotlinx.kover' version 'replace_with_recent_version'
+}
+
+2. Apply code_coverage script:
+
 apply from: "$rootDir/gradle/scripts/code_coverage.gradle"
+
+3. Set Sonarqube properties:
 
 sonarqube {
     properties {
