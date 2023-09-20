@@ -26,6 +26,22 @@ def final REPORTS_DIR = 'build/reports'
 /* Lint            */
 /* --------------- */
 
+tasks.register('checkManifest') {
+    doLast {
+        android.sourceSets.each { sourceSet ->
+            def manifestFile = sourceSet.manifest.srcFile
+            if (manifestFile.exists()) {
+                def manifestContent = manifestFile.text
+                if (manifestContent.contains('screenOrientation="portrait"')
+                        || manifestContent.contains('screenOrientation="landscape"')
+                ) {
+                    throw new GradleException("Some activity in AndroidManifest.xml contains horizontal or landscape screen orientation lock. This is not allowed.")
+                }
+            }
+        }
+    }
+}
+
 project.afterEvaluate {
     if (!project.hasProperty('android')) return
 
@@ -51,6 +67,7 @@ project.afterEvaluate {
             lintConfig file("$rootDir/gradle/scripts/checks/lint.xml")
         }
     }
+    tasks.getByPath("preBuild").dependsOn(checkManifest)
 }
 
 
