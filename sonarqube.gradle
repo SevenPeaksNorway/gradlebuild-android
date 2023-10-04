@@ -1,0 +1,86 @@
+def sonarExclusions = [
+        // Application class
+        "**/*App*",
+        // Generated files
+        "**/*BuildConfig*",
+        "**/*BR*",
+        "**/*Hilt*",
+        "**/*Factory*",
+        "**/*Injector",
+        "**/*Module*",
+        "**/di/*",
+        "**/*Dao*",
+        "**/*Dao_Impl*",
+        "**/*Database*",
+        "**/*Database_Impl*",
+        "**/databinding/**",
+        "**/*DataBind*",
+        // Database converters and data classes
+        "**/*Converter*",
+        "**/*Db*",
+        // Data directories and data classes
+        "**/data/api/responses/*",
+        "**/data/api/errors/*",
+        "**/data/assets/*",
+        "**/data/api/models/*",
+        "**/data/factory/*",
+        "**/model/*",
+        "**/data/local/**",
+        "**/data/manager/**",
+        "**/data/remote/**",
+        // Domain directories and data classes
+        "**/domain/model/*",
+        "**/domain/models/*",
+        // Compose themes, components and navigation
+        "**/theme/*",
+        "**/components/**",
+        "**/navigation/**",
+        // Util directories
+        "**/util/*",
+        "**/ext/*",
+        "**/utils/**",
+        // Custom components
+        "**/custom/**",
+        "**/components/**",
+        "**/ui/bottombar/**",
+        // Compose previews directories
+        "**/preview/*",
+        // Specific files (Fragments, Views, Adapters, etc.)
+        "**/*Activity*",
+        "**/*DataState*",
+        "**/*UIState*",
+        "**/*Destination*",
+        "**/*Screen*",
+        "**/*Broadcaster*",
+        "**/*Adapter*",
+        "**/*Fragment*",
+        "**/*ViewState*",
+        "**/*ViewAction*",
+        "**/*ViewEvent*",
+        "**/*DiffUtils*",
+        "**/*ViewHolder*",
+        "**/*View",
+        "**/*BindableDelegate*",
+        "**/*BindModel*",
+        "**/*Constants*",
+        "**/*BaseRepository*",
+        "**/BaseUseCase.kt",
+        "**/*StatusCode*",
+        "**/*Navigation*",
+        "**/ErrorType.kt",
+        "**/Resource.kt",
+        "**/Design.kt"
+]
+
+sonarqube {
+    properties {
+        if (System.getenv("PR_ID") != null) {
+            property("sonar.pullrequest.key", "$System.env.PR_ID")
+            property("sonar.pullrequest.branch", "$System.env.PR_SOURCE")
+            property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
+        }
+        property "sonar.androidLint.reportPaths", "app/build/reports/lint-results-devDebug.html"
+        property "sonar.coverage.jacoco.xmlReportPaths", "$reportsDir/kover/report.xml"
+        property "sonar.coverage.exclusions", sonarExclusions
+    }
+}
