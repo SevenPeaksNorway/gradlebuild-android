@@ -79,8 +79,8 @@ sonarqube {
             property("sonar.pullrequest.branch", "$System.env.PR_SOURCE")
             property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
         }
-        property "sonar.androidLint.reportPaths", "app/build/reports/lint-results-devDebug.html"
-        property "sonar.coverage.jacoco.xmlReportPaths", "$reportsDir/kover/report.xml"
+        property "sonar.androidLint.reportPaths", "build/reports/lint-results-devDebug.html"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/report.xml"
         property "sonar.coverage.exclusions", sonarExclusions
     }
 }
