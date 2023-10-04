@@ -1,0 +1,81 @@
+def koverExclusions = [
+        // Application class
+        "*App*",
+        // Generated files
+        "*BuildConfig*",
+        "*BR*",
+        "*Hilt*",
+        "*Factory*",
+        "*Injector",
+        "*Module*",
+        "*di.*",
+        "*Dao*",
+        "*Dao_Impl*",
+        "*Database*",
+        "*Database_Impl*",
+        "*databinding*",
+        "*DataBind*",
+        // Database converters and data classes
+        "*Converter",
+        "*Db*",
+        // Data directories and data classes
+        "*data.api.responses*",
+        "*data.api.errors*",
+        "*data.assets*",
+        "*data.api.models.*",
+        "*data.factory*",
+        "*.model*",
+        "*data.local*",
+        "*data.manager*",
+        "*data.remote*",
+        // Domain directories and data classes
+        "*domain.model*",
+        "*domain.models*",
+        // Compose themes, components and navigation
+        "*.theme*",
+        "*.components*",
+        "*.navigation*",
+        // Util directories
+        "*util.*",
+        "*.ext*",
+        "*utils*",
+        // Custom components
+        "*custom*",
+        "*components.*",
+        "*ui.bottombar.*",
+        // Compose previews directories
+        "*preview.*",
+        // Specific files (Fragments, Views, Adapters, etc.)
+        "*Activity*",
+        "*DataState*",
+        "*UIState*",
+        "*Destination*",
+        "*Screen*",
+        "*Broadcaster*",
+        "*Adapter*",
+        "*Fragment*",
+        "*ViewState*",
+        "*ViewAction*",
+        "*ViewEvent*",
+        "*DiffUtils*",
+        "*ViewHolder*",
+        "*View",
+        "*BindableDelegate*",
+        "*BindModel*",
+        "*Constants*",
+        "*BaseRepository*",
+        "*BaseUseCase.kt",
+        "*StatusCode*",
+        "*Navigation*",
+        "*ErrorType*",
+        "*Resource*",
+        "*Design*"
+]
+
+koverReport {
+    filters {
+        excludes {
+            classes(koverExclusions)
+        }
+    }
+}
