@@ -35,9 +35,9 @@ def sonarExclusions = [
         "**/*Screen*",
         "**/*Broadcaster*",
         "**/*Navigation*",
-        "**/ErrorType.kt",
-        "**/Resource.kt",
-        "**/Design.kt"
+        "**/Design.kt",
+        // KotlinX Serialization generated code
+        "**/*serializer*",
 ]
 
 sonarqube {

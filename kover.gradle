@@ -35,9 +35,9 @@ def koverExclusions = [
         "*Screen*",
         "*Broadcaster*",
         "*Navigation*",
-        "*ErrorType*",
-        "*Resource*",
-        "*Design*"
+        "*Design*",
+        // KotlinX Serialization generated code
+        "*serializer*"
 ]
 
 koverReport {
