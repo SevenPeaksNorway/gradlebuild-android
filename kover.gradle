@@ -36,7 +36,7 @@ def koverExclusions = [
         "*Broadcaster*",
         "*Navigation*",
         "*Design*",
-        // KotlinX Serialization generated files
+        // KotlinX Serialization generated code
         "*serializer*"
 ]
 

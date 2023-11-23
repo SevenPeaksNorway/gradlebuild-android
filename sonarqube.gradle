@@ -36,7 +36,7 @@ def sonarExclusions = [
         "**/*Broadcaster*",
         "**/*Navigation*",
         "**/Design.kt",
-        // KotlinX Serialization generated files
+        // KotlinX Serialization generated code
         "**/*serializer*",
 ]
 
