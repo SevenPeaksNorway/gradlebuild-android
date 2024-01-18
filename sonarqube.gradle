@@ -40,15 +40,24 @@ def sonarExclusions = [
         "**/*serializer*",
 ]
 
+def lintReport = "${project.projectDir}/app/build/reports/lint-results-devDebug.xml"
+def singleModuleKoverReport = "${project.projectDir}/app/build/reports/kover/report.xml"
+def multiModuleKoverReport = "${project.projectDir}/build/reports/kover/report.xml"
+
 sonarqube {
     properties {
+        property("sonar.projectName",  "$System.env.SONARCLOUD_PROJECT_NAME")
+        property("sonar.projectKey", "$System.env.SONARCLOUD_PROJECT_KEY")
+        property("sonar.token", "$System.env.MAPPED_SONARCLOUD_TOKEN")
+        property("sonar.organization", "$System.env.SONARCLOUD_ORGANIZATION")
+        property("sonar.host.url", "$System.env.SONARCLOUD_HOST_URL")
         if (System.getenv("PR_ID") != null) {
             property("sonar.pullrequest.key", "$System.env.PR_ID")
             property("sonar.pullrequest.branch", "$System.env.PR_SOURCE")
             property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
         }
-        property "sonar.androidLint.reportPaths", "build/reports/lint-results-devDebug.html"
-        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/report.xml"
+        property "sonar.androidLint.reportPaths", "$lintReport"
+        property "sonar.coverage.jacoco.xmlReportPaths", "$singleModuleKoverReport,$multiModuleKoverReport"
         property "sonar.coverage.exclusions", sonarExclusions
     }
 }
