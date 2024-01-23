@@ -116,7 +116,7 @@ project.afterEvaluate {
 private def addCheckTasks(String mode) {
     def check = rootProject.tasks.maybeCreate("check${mode}All")
     tasks.forEach { task -> addTaskDep(check, task, mode) }
-    tasks.whenTaskAdded { task -> addTaskDep(check, task, mode) }
+    tasks.configureEach { task -> addTaskDep(check, task, mode) }
     return check
 }
 
