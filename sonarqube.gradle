@@ -40,9 +40,8 @@ def sonarExclusions = [
         "**/*serializer*",
 ]
 
-def lintReport = "${project.projectDir}/app/build/reports/lint-results-devDebug.xml"
-def singleModuleKoverReport = "${project.projectDir}/app/build/reports/kover/report.xml"
-def multiModuleKoverReport = "${project.projectDir}/build/reports/kover/report.xml"
+def lintReport = "${project.rootDir}/app/build/reports/lint-results-devDebug.xml"
+def koverReport = "${project.projectDir}/build/reports/kover/report.xml"
 
 sonarqube {
     properties {
@@ -57,7 +56,7 @@ sonarqube {
             property("sonar.pullrequest.base", "$System.env.PR_DESTINATION")
         }
         property "sonar.androidLint.reportPaths", "$lintReport"
-        property "sonar.coverage.jacoco.xmlReportPaths", "$singleModuleKoverReport,$multiModuleKoverReport"
+        property "sonar.coverage.jacoco.xmlReportPaths", "$koverReport"
         property "sonar.coverage.exclusions", sonarExclusions
     }
 }
