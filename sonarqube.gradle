@@ -44,6 +44,9 @@ def lintReport = "${project.rootDir}/app/build/reports/lint-results-devDebug.xml
 def koverReport = "${project.projectDir}/build/reports/kover/report.xml"
 
 sonarqube {
+    def exclusionsFile = file("${project.rootProject.projectDir}/exclusions_sonar")
+    def appSpecificExclusions = readFile(exclusionsFile)
+    def exclusions = sonarExclusions + appSpecificExclusions
     properties {
         property("sonar.projectName",  "$System.env.SONARCLOUD_PROJECT_NAME")
         property("sonar.projectKey", "$System.env.SONARCLOUD_PROJECT_KEY")
@@ -57,6 +60,14 @@ sonarqube {
         }
         property "sonar.androidLint.reportPaths", "$lintReport"
         property "sonar.coverage.jacoco.xmlReportPaths", "$koverReport"
-        property "sonar.coverage.exclusions", sonarExclusions
+        property "sonar.coverage.exclusions", exclusions
+    }
+}
+
+static def readFile(File file) {
+    if (file.exists()) {
+        return file.readLines()
+    } else {
+        return new ArrayList<String>()
     }
 }
