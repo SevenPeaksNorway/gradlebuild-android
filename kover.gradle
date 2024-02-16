@@ -43,7 +43,7 @@ def koverExclusions = [
 koverReport {
     filters {
         excludes {
-            def exclusionsFile = file("${project.rootProject.projectDir}/exclusions_sonar")
+            def exclusionsFile = file("${project.rootProject.projectDir}/exclusions_kover")
             def appSpecificExclusions = readFile(exclusionsFile)
             def exclusions = koverExclusions + appSpecificExclusions
             classes(exclusions)
