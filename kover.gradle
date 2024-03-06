@@ -40,13 +40,23 @@ def koverExclusions = [
         "*serializer*"
 ]
 
+def koverExcludeAnnotations = [
+        "Composable",
+        "Preview*"
+]
+
 koverReport {
     filters {
         excludes {
-            def exclusionsFile = file("${project.rootProject.projectDir}/exclusions_kover")
-            def appSpecificExclusions = readFile(exclusionsFile)
+            def classesExclusionsFile = file("${project.rootProject.projectDir}/exclusions_kover")
+            def appSpecificExclusions = readFile(classesExclusionsFile)
             def exclusions = koverExclusions + appSpecificExclusions
             classes(exclusions)
+
+            def annotationsExclusionsFile = file("${project.rootProject.projectDir}/exclusions_kover_annotation")
+            def appSpecificAnnotationExclusions = readFile(annotationsExclusionsFile)
+            def annotationExclusions = koverExcludeAnnotations + appSpecificAnnotationExclusions
+            annotatedBy(*annotationExclusions)
         }
     }
 }
