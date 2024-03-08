@@ -1,7 +1,7 @@
 ## App Specific Exclusions for Sonar & Kover
 
-1. Update the [GradleBuild Android](https://bitbucket.org/7peakssoftware/gradlebuild-android/src/master/) version tag to `2.6.2`.
-2. Create two files with name `exclusions_kover` and `exclusions_sonar` at the **project's root directory**.
+1. Update the [GradleBuild Android](https://bitbucket.org/7peakssoftware/gradlebuild-android/src/master/) version tag to `2.6.3`.
+2. Create two files with name `exclusions_kover`, `exclusions_kover_annotation` and `exclusions_sonar` at the **project's root directory**.
 3. And add the app specific exclusions to the respective files.
 
 Example `exclusions_kover`
@@ -13,6 +13,13 @@ Example `exclusions_kover`
 *EmailField*
 *OtpField*
 *PasswordField*
+```
+
+Example `exclusions_kover_annotation`
+
+```
+*Generated
+*CustomAnnotationToExclude
 ```
 
 Example `exclusions_sonar`
