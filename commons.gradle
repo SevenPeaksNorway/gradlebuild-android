@@ -77,7 +77,14 @@ ext.outputFileName = { name ->
  * "setupVersion it, 'X.Y.Z'".
  */
 ext.appVersion = { version ->
-    def final buildNumber = getBuildNumber()
+    def buildNumber
+    def buildNumberString = System.getenv("BUILD_NUMBER")
+     if (buildNumberString != null) {
+        buildNumber = Long.parseLong(buildNumberString)
+    } else {
+        buildNumber = getBuildNumber()
+    }
+
     def final baseCode = getBaseVersionCode(version)
 
     outputFileVersionSuffix = "-$version-b$buildNumber"
@@ -153,7 +160,7 @@ private static int getBaseVersionCode(String version) {
     return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
 }
 
-private static int getBuildNumber() {
+private static Long getBuildNumber() {
     def build
 
     try {
