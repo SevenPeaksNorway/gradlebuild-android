@@ -259,18 +259,18 @@ ext.enableCrashlytics = {
  * */
 ext.addReleaseNotes = { note ->
     def changeLog = ""
-    def changeLogCmd = ""
-    def changeKeys = "feature/\nbugfix/\nrefactor/".split('\n')
     try {
-        changeLogCmd = "git log --first-parent --max-count=1 --pretty='%b'".execute().text.split("\n")
-        changeLogCmd.each { line ->
-            if (line.startsWith("'")) {
-                line = line.substring(1)
-            }
-            changeKeys.each { word -> 
-                if (line.startsWith(word)) {
-                    changeLog += line
-                }
+        if (System.getenv("PR_ID") == null) {
+            changeLog = "git log -1 --pretty=%B".execute().text.split("\n")[2]
+        } else {
+            def branchName = "$System.env.PR_SOURCE".replace("refs/heads/", "")
+            if(branchName =~ /-\d/) {
+                def parts = branchName.split("-", 2)
+                def part1 = parts[0]
+                def part2 = parts[1].replaceAll("_", " ").replaceAll("-", " ")
+                changeLog = part1 + "-" + part2
+            } else {
+                changeLog = branchName.replaceAll("-", " ")
             }
         }
     } catch (Exception ignored) {
@@ -278,7 +278,7 @@ ext.addReleaseNotes = { note ->
         return note
     }
     println "Change Log => \n${changeLog.trim()}"
-    
+
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
