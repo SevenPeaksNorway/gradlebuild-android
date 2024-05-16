@@ -95,8 +95,8 @@ task checkstyle(type: Checkstyle) {
     exclude '**/gen/**'
     classpath = files()
     reports {
-        html.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
-        xml.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
+        html.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
+        xml.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
     }
     ignoreFailures = true // Errors report will be generated and shown by Jenkins
 }
