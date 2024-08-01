@@ -257,7 +257,21 @@ ext.enableCrashlytics = {
  * Add release note to firebase app distribution
  * Release note will contain the last PR title merged to master branch
  * */
-ext.addReleaseNotes = { note ->
+ext.addReleaseNotes = { ->
+    def changeLog = getReleaseNotes()
+
+    println "Change Log => \n${changeLog.trim()}"
+
+    android.defaultConfig.with {
+        if (this.hasProperty('firebaseAppDistribution')) {
+            firebaseAppDistribution {
+                releaseNotes = "${changeLog.toString().trim()}"
+            }
+        }
+    }
+}
+
+ext.getReleaseNotes = { ->
     def changeLog = ""
     try {
         if (System.getenv("PR_ID") == null) {
@@ -274,18 +288,10 @@ ext.addReleaseNotes = { note ->
             }
         }
     } catch (Exception ignored) {
-        println "Change Log ex=> \n${ignored.message}"
-        return note
+        return ""
     }
-    println "Change Log => \n${changeLog.trim()}"
 
-    android.defaultConfig.with {
-        if (this.hasProperty('firebaseAppDistribution')) {
-            firebaseAppDistribution {
-                releaseNotes = "${changeLog.toString().trim()}"
-            }
-        }
-    }
+    return changeLog.toString().trim()
 }
 
 tasks.register('releaseNote') {
