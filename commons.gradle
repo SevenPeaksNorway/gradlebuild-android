@@ -164,7 +164,7 @@ private static Long getBuildNumber() {
     def build
 
     try {
-        def final buildStr = 'git rev-list --count HEAD'.execute().text.trim()
+        def final buildStr = isFromIde() ? "1" : 'git rev-list --count HEAD'.execute().text.trim()
         build = buildStr.toInteger()
     } catch (Exception ignored) {
         if (verbose()) System.err.println 'Build number is not available'
@@ -275,7 +275,7 @@ ext.getReleaseNotes = { ->
     def changeLog = ""
     try {
         if (System.getenv("PR_ID") == null) {
-            changeLog = "git log -1 --pretty=%B".execute().text.split("\n")[2]
+            changeLog = isFromIde() ? "" : "git log -1 --pretty=%B".execute().text.split("\n")[2]
         } else {
             def branchName = "$System.env.PR_SOURCE".replace("refs/heads/", "")
             if(branchName =~ /-\d/) {
@@ -404,4 +404,8 @@ private static boolean verbose() {
 
 private static void log(String message) {
     if (verbose()) println message
+}
+
+private static boolean isFromIde() {
+    return System.properties.any { key, value -> key.startsWith("idea.") }
 }
