@@ -25,7 +25,7 @@ def sonarExclusions = [
         "**/*App*",
         // Generated files
         "**/*BuildConfig*",
-        "**/*BR*",
+        "*BR*",
         "**/*Hilt*",
         "**/*Factory*",
         "**/*Injector",
@@ -35,59 +35,44 @@ def sonarExclusions = [
         "**/*Dao_Impl*",
         "**/*Database*",
         "**/*Database_Impl*",
-        "**/databinding/**",
-        "**/*DataBind*",
+        "*databinding*",
+        "*DataBind*",
         // Database converters and data classes
         "**/*Converter*",
         "**/*Db*",
-        // Data directories and data classes
-        "**/data/api/responses/*",
-        "**/data/api/errors/*",
-        "**/data/assets/*",
-        "**/data/api/models/*",
-        "**/data/factory/*",
-        "**/data/model/*",
-        "**/data/local/**",
-        "**/data/manager/**",
-        "**/data/remote/**",
-        // Domain directories and data classes
-        "**/domain/model/*",
-        "**/domain/models/*",
         // Compose themes, components and navigation
-        "**/ui/theme/*",
-        "**/ui/components/**",
-        "**/ui/navigation/**",
+        "**/theme/*",
+        "**/components/**",
+        "**/component/**",
+        "**/navigation/**",
         // Util directories
-        "**/util/ext/*",
+        "**/util/*",
+        "**/ext/*",
         "**/utils/**",
         // Custom components
         "**/custom/**",
         "**/components/**",
+        "**/component/**",
         "**/ui/bottombar/**",
         // Compose previews directories
         "**/preview/*",
         // Specific files (Fragments, Views, Adapters, etc.)
         "**/*Activity*",
-        "**/*DataState*",
-        "**/*UIState*",
-        "**/*Destination*",
-        "**/*Screen*",
         "**/*Broadcaster*",
         "**/*Adapter*",
         "**/*Fragment*",
-        "**/*ViewState*",
-        "**/*ViewAction*",
-        "**/*ViewEvent*",
+        "**/*Screen*",
+        "**/*PreviewParametersProvider*",
         "**/*DiffUtils*",
         "**/*ViewHolder*",
         "**/*View",
         "**/*BindableDelegate*",
         "**/*BindModel*",
         "**/*Constants*",
-        "**/*BaseRepository*",
-        "**/BaseUseCase.kt",
-        "**/*StatusCode*",
         "**/*Navigation*",
+        "**/Design.kt",
+        // KotlinX Serialization generated code
+        "**/*serializer*",
 ]
 def koverExclusions = [
         // Application class
@@ -109,54 +94,40 @@ def koverExclusions = [
         // Database converters and data classes
         "*Converter",
         "*Db*",
-        // Data directories and data classes
-        "*data.api.responses*",
-        "*data.api.errors*",
-        "*data.assets*",
-        "*data.api.models.*",
-        "*data.factory*",
-        "*data.model*",
-        "*data.local*",
-        "*data.manager*",
-        "*data.remote*",
-        // Domain directories and data classes
-        "*domain.model*",
-        "*domain.models*",
         // Compose themes, components and navigation
-        "*ui.theme*",
-        "*ui.components*",
-        "*ui.navigation*",
+        "*.theme*",
+        "*.components*",
+        "*.component*",
+        "*.navigation*",
         // Util directories
-        "*util.ext*",
+        "*util.*",
+        "*.ext*",
         "*utils*",
         // Custom components
         "*custom*",
         "*components.*",
+        "*component.*",
         "*ui.bottombar.*",
         // Compose previews directories
         "*preview.*",
         // Specific files (Fragments, Views, Adapters, etc.)
         "*Activity*",
-        "*DataState*",
-        "*UIState*",
         "*Destination*",
         "*Screen*",
-        "*Broadcaster*",
+        "*PreviewParametersProvider*",
         "*Adapter*",
         "*Fragment*",
-        "*ViewState*",
-        "*ViewAction*",
-        "*ViewEvent*",
+        "*Broadcaster*",
+        "*Navigation*",
+        "*Design*",
         "*DiffUtils*",
         "*ViewHolder*",
         "*View",
         "*BindableDelegate*",
         "*BindModel*",
         "*Constants*",
-        "*BaseRepository*",
-        "*BaseUseCase.kt",
-        "*StatusCode*",
-        "*Navigation*"
+        // KotlinX Serialization generated code
+        "*serializer*"
 ]
 
 sonarqube {
