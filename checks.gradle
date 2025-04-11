@@ -80,6 +80,7 @@ ktlint {
             element.file.path.contains("build")
         }
         exclude("**/build.gradle.kts")
+        exclude("**/Config.kt")
     }
 }
 
