@@ -72,6 +72,15 @@ ktlint {
     reporters {
         reporter 'checkstyle'
     }
+    filter {
+        exclude { element ->
+            element.file.path.contains("generated")
+        }
+        exclude { element ->
+            element.file.path.contains("build")
+        }
+        exclude("**/build.gradle.kts")
+    }
 }
 
 
