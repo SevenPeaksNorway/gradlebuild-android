@@ -84,6 +84,19 @@ ktlint {
     }
 }
 
+tasks.matching { it.name.contains("runKtlintFormat") }.configureEach {
+    def copyFilesTask = tasks.findByName("copyFiles")
+    if (copyFilesTask != null) {
+        dependsOn(copyFilesTask)
+    }
+}
+
+tasks.matching { it.name.contains("runKtlintCheck") }.configureEach {
+    def copyFilesTask = tasks.findByName("copyFiles")
+    if (copyFilesTask != null) {
+        dependsOn(copyFilesTask)
+    }
+}
 
 /* --------------- */
 /* Checkstyle      */
