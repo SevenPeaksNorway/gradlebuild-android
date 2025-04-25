@@ -333,6 +333,35 @@ ext.addVendorFlavors = {
 }
 
 /**
+ * Adds and configures new dimension for Google builds.
+ * Used for cases when there is no Huawei build required anymore, but need to keep flavors structure.
+ */
+ext.addGoogleVendorFlavor = {
+    android.with {
+
+        final dimens = getFlavorDimensionList() ?: new ArrayList(0)
+
+        // Applying default dimension, in case it is not applied yet
+        if (dimens.size() == 1) {
+            final String defaultDimension = getFlavorDimensionList().get(0)
+            productFlavors.all { flavor ->
+                flavor.dimension defaultDimension
+            }
+        }
+
+        // Adding new flavor dimension
+        flavorDimensions((dimens + 'vendor') as String[])
+
+        // Adding extra flavors
+        productFlavors {
+            google {
+                dimension 'vendor'
+            }
+        }
+    }
+}
+
+/**
  * Filters out all release builds which are not related to "prod" flavor.
  */
 ext.ignoreNonProductionReleaseVariants = {
