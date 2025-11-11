@@ -121,7 +121,7 @@ private def addCheckTasks(String mode) {
 }
 
 private static def addTaskDep(check, task, mode) {
-    if (task.name ==~ /lint.*${mode}/ ||
+    if ((task.name ==~ /lint.*${mode}/ && !task.name.startsWith("lintFix")) ||
             task.name ==~ /ktlint.*${mode}Check/ ||
             task.name == 'checkstyle' ||
             task.name ==~ /test.*${mode}UnitTest/
