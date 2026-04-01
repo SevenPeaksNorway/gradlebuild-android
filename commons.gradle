@@ -59,7 +59,7 @@ ext.outputFileName = { name ->
 
     android.defaultConfig.with {
         // Setting output file name for bundles (.aab)
-        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
+        project.base.archivesName.set("$outputFileAppName$outputFileVersionSuffix")
     }
 }
 
@@ -87,54 +87,60 @@ ext.appVersion = { version ->
     log "VERSION  | Build number: $buildNumber"
 
     android.defaultConfig.with {
-        versionName version
-        versionCode baseCode
+        versionName = version
+        versionCode = baseCode
         buildConfigField 'int', 'BUILD_NUMBER', "$buildNumber"
         // Setting output file name for bundles (.aab)
-        setProperty('archivesBaseName', "$outputFileAppName$outputFileVersionSuffix")
+        project.base.archivesName.set("$outputFileAppName$outputFileVersionSuffix")
     }
 
     // We also need to fine-tune version name and code for different cases
-    android.applicationVariants.whenObjectAdded { variant ->
-        // Build number should be included into all release version codes, since each upload to
-        // Google Play should have increased version code, but for debug builds it is better
-        // to keep single code within same version to simplify updates to earlier versions.
+    androidComponents {
+        onVariants(selector().all()) { variant ->
+            // Build number should be included into all release version codes, since each upload to
+            // Google Play should have increased version code, but for debug builds it is better
+            // to keep single code within same version to simplify updates to earlier versions.
 
-        // When building on build server (and distributing with Fabric) it is important to include
-        // build number in version name to make it easier for testers to provide exact build number
+            // When building on build server (and distributing with Fabric) it is important to include
+            // build number in version name to make it easier for testers to provide exact build number
 
-        def suffixes = variant.productFlavors.collect { it.versionNameSuffix } +
-                variant.buildType.versionNameSuffix
-        def suffix = suffixes.findAll { it != null }.join('')
-        def baseVersion = version + suffix
+            def flavorNames = variant.productFlavors.collect { it.second }
+            def suffixes = flavorNames.collect { fName ->
+                android.productFlavors.findByName(fName)?.versionNameSuffix
+            }
+            def btSuffix = android.buildTypes.findByName(variant.buildType)?.versionNameSuffix
+            suffixes.add(btSuffix)
+            def suffix = suffixes.findAll { it != null }.join('')
+            def baseVersion = version + suffix
 
-        String versionName
-        Integer versionCode
-        if (variant.buildType.name.contains('release')) {
-            versionName = baseVersion
-            versionCode = baseCode + buildNumber
-        } else if (isOnBuildServer()) {
-            versionName = "$baseVersion-b$buildNumber"
-            versionCode = baseCode + buildNumber
-        } else {
-            // Debug builds on local machine
-            versionName = "$baseVersion-b$buildNumber"
-            versionCode = baseCode + buildNumber
+            String versionName
+            Integer versionCode
+            if (variant.buildType?.contains('release')) {
+                versionName = baseVersion
+                versionCode = baseCode + buildNumber
+            } else if (isOnBuildServer()) {
+                versionName = "$baseVersion-b$buildNumber"
+                versionCode = baseCode + buildNumber
+            } else {
+                // Debug builds on local machine
+                versionName = "$baseVersion-b$buildNumber"
+                versionCode = baseCode + buildNumber
+            }
+
+            log "VERSION  | ${variant.name} = $versionName / $versionCode"
+
+            // Rewriting version name and code for each output and setting apk file name
+            variant.outputs.forEach { output ->
+                output.versionCode.set(versionCode)
+                output.versionName.set(versionName)
+                // Setting output file name for apks
+                output.outputFileName.set("${outputFileAppName}-${version}-b${buildNumber}-${variant.name}.apk")
+            }
+
+            // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
+            def buildConfigFieldClass = Class.forName("com.android.build.api.variant.BuildConfigField", true, variant.getClass().getClassLoader())
+            variant.buildConfigFields.put("VERSION_NAME_FULL", buildConfigFieldClass.newInstance("String", "\"$versionName\"", "Version Name Full"))
         }
-
-        log "VERSION  | ${variant.name} = $versionName / $versionCode"
-
-        // Rewriting version name and code for each output and setting apk file name
-        variant.outputs.each { output ->
-            output.versionCodeOverride = versionCode
-            output.versionNameOverride = versionName
-            // Setting output file name for apks
-            output.outputFileName =
-                    "$outputFileAppName-$version-b$buildNumber-${output.baseName}.apk"
-        }
-
-        // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
-        variant.buildConfigField 'String', 'VERSION_NAME_FULL', "\"$versionName\""
     }
 }
 
@@ -318,13 +324,13 @@ ext.addVendorFlavors = {
         // Adding extra flavors
         productFlavors {
             google {
-                dimension 'vendor'
+                dimension = 'vendor'
             }
             huawei {
-                dimension 'vendor'
+                dimension = 'vendor'
 
                 // applicationIdSuffix '.huawei'
-                versionNameSuffix '-hw'
+                versionNameSuffix = '-hw'
 
                 signingConfig android.signingConfigs.huawei // Only applies to release builds
             }
@@ -355,7 +361,7 @@ ext.addGoogleVendorFlavor = {
         // Adding extra flavors
         productFlavors {
             google {
-                dimension 'vendor'
+                dimension = 'vendor'
             }
         }
     }
@@ -366,14 +372,18 @@ ext.addGoogleVendorFlavor = {
  */
 ext.ignoreNonProductionReleaseVariants = {
     // Ignoring useless build variants
-    android.variantFilter { variant ->
-        final names = variant.flavors*.name
-        // Ignoring non-prod release variants
-        final ignoreReleaseNonProd = variant.buildType.name == 'release' && !names.contains('prod')
-        // Ignoring non-prod Huawei variants
-        final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
+    androidComponents {
+        beforeVariants(selector().all()) { variantBuilder ->
+            final names = variantBuilder.productFlavors.collect { it.second }
+            // Ignoring non-prod release variants
+            final ignoreReleaseNonProd = variantBuilder.buildType == 'release' && !names.contains('prod')
+            // Ignoring non-prod Huawei variants
+            final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
 
-        if (ignoreReleaseNonProd || ignoreHuaweiNonProd) variant.setIgnore(true)
+            if (ignoreReleaseNonProd || ignoreHuaweiNonProd) {
+                variantBuilder.enable = false
+            }
+        }
     }
 }
 
