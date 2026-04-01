@@ -1,3 +1,5 @@
+import groovy.xml.XmlSlurper
+
 /*
 Import this script in *root* build file:
 
@@ -88,15 +90,17 @@ checkstyle {
     showViolations = false
 }
 
-task checkstyle(type: Checkstyle) {
+tasks.register('checkstyle', Checkstyle) {
     // https:docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.Checkstyle.html
     source 'src'
     include '**/*.java', '**/*.xml'
     exclude '**/gen/**'
     classpath = files()
     reports {
-        html.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
-        xml.destination file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
+        html.required = true
+        html.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
+        xml.required = true
+        xml.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
     }
     ignoreFailures = true // Errors report will be generated and shown by Jenkins
 }
