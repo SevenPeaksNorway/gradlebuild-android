@@ -143,11 +143,12 @@ sonarqube {
     }
 }
 
-koverMerged {
-    enable()
-    filters {
-        classes {
-            excludes.addAll(koverExclusions)
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(koverExclusions)
+            }
         }
     }
 }
