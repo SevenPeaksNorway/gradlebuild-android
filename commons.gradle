@@ -260,7 +260,7 @@ ext.addReleaseNotes = { note ->
             if (line.startsWith("'")) {
                 line = line.substring(1)
             }
-            changeKeys.each { word -> 
+            changeKeys.each { word ->
                 if (line.startsWith(word)) {
                     changeLog += line
                 }
@@ -271,7 +271,7 @@ ext.addReleaseNotes = { note ->
         return note
     }
     println "Change Log => \n${changeLog.trim()}"
-    
+
     android.defaultConfig.with {
         if (this.hasProperty('firebaseAppDistribution')) {
             firebaseAppDistribution {
@@ -370,10 +370,12 @@ ext.ignoreNonProductionReleaseVariants = {
         final names = variant.flavors*.name
         // Ignoring non-prod release variants
         final ignoreReleaseNonProd = variant.buildType.name == 'release' && !names.contains('prod')
+        // Ignoring prod debug variant
+        final ignoreDebugProd = variant.buildType.name == 'debug' && names.contains('prod')
         // Ignoring non-prod Huawei variants
         final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
 
-        if (ignoreReleaseNonProd || ignoreHuaweiNonProd) variant.setIgnore(true)
+        if (ignoreReleaseNonProd || ignoreHuaweiNonProd || ignoreDebugProd) variant.setIgnore(true)
     }
 }
 
