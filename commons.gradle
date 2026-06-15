@@ -57,9 +57,8 @@ String outputFileVersionSuffix = ''
 ext.outputFileName = { name ->
     outputFileAppName = name
 
-    android.defaultConfig.with {
-        // Setting output file name for bundles (.aab)
-        project.base.archivesName.set("$outputFileAppName$outputFileVersionSuffix")
+    base {
+        archivesName = "$outputFileAppName$outputFileVersionSuffix"
     }
 }
 
@@ -87,61 +86,67 @@ ext.appVersion = { version ->
     log "VERSION  | Build number: $buildNumber"
 
     android.defaultConfig.with {
-        versionName = version
-        versionCode = baseCode
+        versionName version
+        versionCode baseCode
         buildConfigField 'int', 'BUILD_NUMBER', "$buildNumber"
-        // Setting output file name for bundles (.aab)
-        project.base.archivesName.set("$outputFileAppName$outputFileVersionSuffix")
     }
 
-    // We also need to fine-tune version name and code for different cases
-    androidComponents {
-        onVariants(selector().all()) { variant ->
-            // Build number should be included into all release version codes, since each upload to
-            // Google Play should have increased version code, but for debug builds it is better
-            // to keep single code within same version to simplify updates to earlier versions.
+    base {
+        archivesName = "$outputFileAppName$outputFileVersionSuffix"
+    }
 
-            // When building on build server (and distributing with Fabric) it is important to include
-            // build number in version name to make it easier for testers to provide exact build number
+    // We also need to fine-tune version name and code for different cases.
+    // New variant API (AGP 9 `android.newDsl=true`) replaces `applicationVariants.whenObjectAdded`.
+    androidComponents.onVariants(androidComponents.selector().all(), { variant ->
+        // Build number should be included into all release version codes, since each upload to
+        // Google Play should have increased version code, but for debug builds it is better
+        // to keep single code within same version to simplify updates to earlier versions.
 
-            def flavorNames = variant.productFlavors.collect { it.second }
-            def suffixes = flavorNames.collect { fName ->
-                android.productFlavors.findByName(fName)?.versionNameSuffix
-            }
-            def btSuffix = android.buildTypes.findByName(variant.buildType)?.versionNameSuffix
-            suffixes.add(btSuffix)
-            def suffix = suffixes.findAll { it != null }.join('')
-            def baseVersion = version + suffix
+        // When building on build server (and distributing with Fabric) it is important to include
+        // build number in version name to make it easier for testers to provide exact build number
 
-            String versionName
-            Integer versionCode
-            if (variant.buildType?.contains('release')) {
-                versionName = baseVersion
-                versionCode = baseCode + buildNumber
-            } else if (isOnBuildServer()) {
-                versionName = "$baseVersion-b$buildNumber"
-                versionCode = baseCode + buildNumber
-            } else {
-                // Debug builds on local machine
-                versionName = "$baseVersion-b$buildNumber"
-                versionCode = baseCode + buildNumber
-            }
+        // The new variant API exposes flavors as (dimension, name) pairs, so the versionNameSuffix
+        // is read back from the input DSL by name.
+        def suffixes = variant.productFlavors.collect {
+            android.productFlavors.findByName(it.second)?.versionNameSuffix
+        } + android.buildTypes.findByName(variant.buildType)?.versionNameSuffix
+        def suffix = suffixes.findAll { it != null }.join('')
+        def baseVersion = version + suffix
 
-            log "VERSION  | ${variant.name} = $versionName / $versionCode"
-
-            // Rewriting version name and code for each output and setting apk file name
-            variant.outputs.forEach { output ->
-                output.versionCode.set(versionCode)
-                output.versionName.set(versionName)
-                // Setting output file name for apks
-                output.outputFileName.set("${outputFileAppName}-${version}-b${buildNumber}-${variant.name}.apk")
-            }
-
-            // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field
-            def buildConfigFieldClass = Class.forName("com.android.build.api.variant.BuildConfigField", true, variant.getClass().getClassLoader())
-            variant.buildConfigFields.put("VERSION_NAME_FULL", buildConfigFieldClass.newInstance("String", "\"$versionName\"", "Version Name Full"))
+        String versionName
+        Integer versionCode
+        if (variant.buildType.contains('release')) {
+            versionName = baseVersion
+            versionCode = baseCode + buildNumber
+        } else if (isOnBuildServer()) {
+            versionName = "$baseVersion-b$buildNumber"
+            versionCode = baseCode + buildNumber
+        } else {
+            // Debug builds on local machine
+            versionName = "$baseVersion-b$buildNumber"
+            versionCode = baseCode + buildNumber
         }
-    }
+
+        log "VERSION  | ${variant.name} = $versionName / $versionCode"
+
+        // Rewriting version name and code for each output. The APK/AAB file name comes from
+        // `base.archivesName` configured above (the new variant API drops per-output renaming).
+        variant.outputs.each { output ->
+            output.versionCode.set(versionCode)
+            output.versionName.set(versionName)
+        }
+
+        // We can't affect BuildConfig.VERSION_NAME from a variant, so we'll just set a new field.
+        // BuildConfigField is instantiated reflectively: AGP variant API classes are loadable at
+        // runtime but are not on the `apply from` script's compile classpath.
+        def buildConfigFieldClass = variant.getClass().getClassLoader()
+                .loadClass('com.android.build.api.variant.BuildConfigField')
+        variant.buildConfigFields.put(
+                'VERSION_NAME_FULL',
+                buildConfigFieldClass.getConstructor(String, Serializable, String)
+                        .newInstance('String', "\"$versionName\"".toString(), null)
+        )
+    } as org.gradle.api.Action)
 }
 
 private static int getBaseVersionCode(String version) {
@@ -159,17 +164,14 @@ private static int getBaseVersionCode(String version) {
     return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
 }
 
-def getBuildNumber() {
+private static int getBuildNumber() {
     def build
 
     try {
-        def buildStr = providers.exec {
-            commandLine("git", "rev-list", "--count", "HEAD")
-        }.standardOutput.asText.get().trim()
-
+        def final buildStr = 'git rev-list --count HEAD'.execute().text.trim()
         build = buildStr.toInteger()
     } catch (Exception ignored) {
-        println "Git error: ${ignored.message}"
+        if (verbose()) System.err.println 'Build number is not available'
         return 1
     }
 
@@ -223,21 +225,28 @@ ext.enableAppNameLogic = {
         resValue 'string', 'app_name', appNameBase ?: ''
     }
 
-    android.applicationVariants.whenObjectAdded { variant ->
-        def appName = variant.productFlavors.collect { appNames.get(it.name) }.find { it != null }
-                ?: appNames.get(variant.buildType.name)
+    androidComponents.onVariants(androidComponents.selector().all(), { variant ->
+        def appName = variant.productFlavors.collect { appNames.get(it.second) }.find { it != null }
+                ?: appNames.get(variant.buildType)
                 ?: appNameBase
 
         if (appName != null) {
-            def suffixes = variant.productFlavors.collect { appNameSuffixes.get(it.name) } +
-                    appNameSuffixes.get(variant.buildType.name)
+            def suffixes = variant.productFlavors.collect { appNameSuffixes.get(it.second) } +
+                    appNameSuffixes.get(variant.buildType)
             def suffix = suffixes.findAll { it != null }.join('')
             appName += suffix
 
             log "APP NAME | ${variant.name} = $appName"
-            resValue 'string', 'app_name', appName
+            // New variant API: override the `app_name` resValue per variant. ResValue is
+            // instantiated reflectively (not on the `apply from` script's compile classpath).
+            def resValueClass = variant.getClass().getClassLoader()
+                    .loadClass('com.android.build.api.variant.ResValue')
+            variant.resValues.put(
+                    variant.makeResValueKey('string', 'app_name'),
+                    resValueClass.getConstructor(String, String).newInstance(appName.toString(), null)
+            )
         }
-    }
+    } as org.gradle.api.Action)
 }
 
 /**
@@ -261,12 +270,10 @@ ext.enableCrashlytics = {
  * */
 ext.addReleaseNotes = { note ->
     def changeLog = ""
-    def changeKeys = "chore/\nfeature/\nbugfix/\nrefactor/".split('\n')
+    def changeLogCmd = ""
+    def changeKeys = "feature/\nbugfix/\nrefactor/".split('\n')
     try {
-        def changeLogCmd = providers.exec {
-            commandLine("git", "log", "--first-parent", "--max-count=1", "--pretty=%b")
-        }.standardOutput.asText.get().split("\n")
-
+        changeLogCmd = "git log --first-parent --max-count=1 --pretty='%b'".execute().text.split("\n")
         changeLogCmd.each { line ->
             if (line.startsWith("'")) {
                 line = line.substring(1)
@@ -284,8 +291,8 @@ ext.addReleaseNotes = { note ->
     println "Change Log => \n${changeLog.trim()}"
 
     android.defaultConfig.with {
-        if (this.hasProperty('firebaseAppDistribution')) {
-            firebaseAppDistribution {
+        if (this.hasProperty('firebaseAppDistributionDefault')) {
+            firebaseAppDistributionDefault {
                 releaseNotes = "${changeLog.toString().trim()}"
             }
         }
@@ -329,44 +336,15 @@ ext.addVendorFlavors = {
         // Adding extra flavors
         productFlavors {
             google {
-                dimension = 'vendor'
+                dimension 'vendor'
             }
             huawei {
-                dimension = 'vendor'
+                dimension 'vendor'
 
                 // applicationIdSuffix '.huawei'
-                versionNameSuffix = '-hw'
+                versionNameSuffix '-hw'
 
                 signingConfig android.signingConfigs.huawei // Only applies to release builds
-            }
-        }
-    }
-}
-
-/**
- * Adds and configures new dimension for Google builds.
- * Used for cases when there is no Huawei build required anymore, but need to keep flavors structure.
- */
-ext.addGoogleVendorFlavor = {
-    android.with {
-
-        final dimens = getFlavorDimensionList() ?: new ArrayList(0)
-
-        // Applying default dimension, in case it is not applied yet
-        if (dimens.size() == 1) {
-            final String defaultDimension = getFlavorDimensionList().get(0)
-            productFlavors.all { flavor ->
-                flavor.dimension defaultDimension
-            }
-        }
-
-        // Adding new flavor dimension
-        flavorDimensions((dimens + 'vendor') as String[])
-
-        // Adding extra flavors
-        productFlavors {
-            google {
-                dimension = 'vendor'
             }
         }
     }
@@ -376,20 +354,19 @@ ext.addGoogleVendorFlavor = {
  * Filters out all release builds which are not related to "prod" flavor.
  */
 ext.ignoreNonProductionReleaseVariants = {
-    // Ignoring useless build variants
-    androidComponents {
-        beforeVariants(selector().all()) { variantBuilder ->
-            final names = variantBuilder.productFlavors.collect { it.second }
-            // Ignoring non-prod release variants
-            final ignoreReleaseNonProd = variantBuilder.buildType == 'release' && !names.contains('prod')
-            // Ignoring non-prod Huawei variants
-            final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
+    // Ignoring useless build variants. New variant API (AGP 9 `android.newDsl=true`) replaces
+    // the legacy `android.variantFilter`.
+    androidComponents.beforeVariants(androidComponents.selector().all(), { variant ->
+        final names = variant.productFlavors*.second
+        // Ignoring non-prod release variants
+        final ignoreReleaseNonProd = variant.buildType == 'release' && !names.contains('prod')
+        // Ignoring prod debug variant
+        final ignoreDebugProd = variant.buildType == 'debug' && names.contains('prod')
+        // Ignoring non-prod Huawei variants
+        final ignoreHuaweiNonProd = names.contains('huawei') && !names.contains('prod')
 
-            if (ignoreReleaseNonProd || ignoreHuaweiNonProd) {
-                variantBuilder.enable = false
-            }
-        }
-    }
+        if (ignoreReleaseNonProd || ignoreHuaweiNonProd || ignoreDebugProd) variant.enable = false
+    } as org.gradle.api.Action)
 }
 
 /**

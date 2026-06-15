@@ -130,7 +130,7 @@ def koverExclusions = [
         "*serializer*"
 ]
 
-sonarqube {
+sonar {
     properties {
         if (System.getenv("PR_ID") != null) {
             property("sonar.pullrequest.key", "$System.env.PR_ID")
@@ -148,6 +148,11 @@ kover {
         filters {
             excludes {
                 classes(koverExclusions)
+            }
+        }
+        total {
+            xml {
+                xmlFile.set(layout.buildDirectory.file("reports/kover/merged/xml/report.xml"))
             }
         }
     }

@@ -7,8 +7,8 @@ apply from: "$rootDir/gradle/scripts/build_server.gradle"
 android {
     // App Distribution default settings
     defaultConfig {
-        if (this.hasProperty('firebaseAppDistribution')) {
-            firebaseAppDistribution {
+        if (this.hasProperty('firebaseAppDistributionDefault')) {
+            firebaseAppDistributionDefault {
                 groups = System.env.FB_GROUP
                 releaseNotes = System.env.CHANGELOG
             }

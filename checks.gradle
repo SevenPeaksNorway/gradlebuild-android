@@ -1,5 +1,3 @@
-import groovy.xml.XmlSlurper
-
 /*
 Import this script in *root* build file:
 
@@ -21,6 +19,8 @@ checkstyle {
    configFile file('.../checkstyle.xml')
 }
 */
+
+import groovy.xml.XmlSlurper
 
 def final REPORTS_DIR = 'build/reports'
 
@@ -90,16 +90,14 @@ checkstyle {
     showViolations = false
 }
 
-tasks.register('checkstyle', Checkstyle) {
+task checkstyle(type: Checkstyle) {
     // https:docs.gradle.org/current/dsl/org.gradle.api.plugins.quality.Checkstyle.html
     source 'src'
     include '**/*.java', '**/*.xml'
     exclude '**/gen/**'
     classpath = files()
     reports {
-        html.required = true
         html.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.html")
-        xml.required = true
         xml.outputLocation = file("$REPORTS_DIR/checkstyle/checkstyle-result.xml")
     }
     ignoreFailures = true // Errors report will be generated and shown by Jenkins
@@ -119,19 +117,19 @@ project.afterEvaluate {
 
 private def addCheckTasks(String mode) {
     def check = rootProject.tasks.maybeCreate("check${mode}All")
-    tasks.forEach { task -> addTaskDep(check, task, mode) }
-    tasks.configureEach { task -> addTaskDep(check, task, mode) }
+    // Depend on a live TaskCollection that is resolved lazily at task-graph time rather than
+    // eagerly realizing every task here. Eager realization during this (early) afterEvaluate
+    // forced the Sonar tasks to configure before AGP 9's new-DSL variant model was ready,
+    // which broke with "No Android variant found".
+    check.dependsOn tasks.matching { task -> isCheckTask(task.name, mode) }
     return check
 }
 
-private static def addTaskDep(check, task, mode) {
-    if ((task.name ==~ /lint.*${mode}/ && !task.name.startsWith("lintFix")) ||
-            task.name ==~ /ktlint.*${mode}Check/ ||
-            task.name == 'checkstyle' ||
-            task.name ==~ /test.*${mode}UnitTest/
-    ) {
-        check.dependsOn task
-    }
+private static boolean isCheckTask(String name, String mode) {
+    return name ==~ /lint.*${mode}/ ||
+            name ==~ /ktlint.*${mode}Check/ ||
+            name == 'checkstyle' ||
+            name ==~ /test.*${mode}UnitTest/
 }
 
 // pre build run ktlintFormat
