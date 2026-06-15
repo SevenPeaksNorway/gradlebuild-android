@@ -126,7 +126,7 @@ private def addCheckTasks(String mode) {
 }
 
 private static boolean isCheckTask(String name, String mode) {
-    return name ==~ /lint.*${mode}/ ||
+    return (name ==~ /lint.*${mode}/ && !name.startsWith("lintFix")) ||
             name ==~ /ktlint.*${mode}Check/ ||
             name == 'checkstyle' ||
             name ==~ /test.*${mode}UnitTest/
