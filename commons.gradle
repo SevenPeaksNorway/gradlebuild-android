@@ -76,7 +76,7 @@ ext.outputFileName = { name ->
  * "setupVersion it, 'X.Y.Z'".
  */
 ext.appVersion = { version ->
-    def final buildNumber = getBuildNumber()
+    def final buildNumber = getBuildNumber(providers)
     def final baseCode = getBaseVersionCode(version)
 
     outputFileVersionSuffix = "-$version-b$buildNumber"
@@ -164,11 +164,15 @@ private static int getBaseVersionCode(String version) {
     return (major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()) * 10000
 }
 
-private static int getBuildNumber() {
+private static int getBuildNumber(providers) {
     def build
 
     try {
-        def final buildStr = 'git rev-list --count HEAD'.execute().text.trim()
+        // Use providers.exec (instead of String.execute()) so reading git state is
+        // compatible with Gradle's configuration cache and does not raise a problem.
+        def final buildStr = providers.exec {
+            commandLine 'git', 'rev-list', '--count', 'HEAD'
+        }.standardOutput.asText.get().trim()
         build = buildStr.toInteger()
     } catch (Exception ignored) {
         if (verbose()) System.err.println 'Build number is not available'
@@ -273,7 +277,11 @@ ext.addReleaseNotes = { note ->
     def changeLogCmd = ""
     def changeKeys = "feature/\nbugfix/\nrefactor/".split('\n')
     try {
-        changeLogCmd = "git log --first-parent --max-count=1 --pretty='%b'".execute().text.split("\n")
+        // Use providers.exec (instead of String.execute()) so reading git state is
+        // compatible with Gradle's configuration cache and does not raise a problem.
+        changeLogCmd = providers.exec {
+            commandLine 'git', 'log', '--first-parent', '--max-count=1', "--pretty='%b'"
+        }.standardOutput.asText.get().split("\n")
         changeLogCmd.each { line ->
             if (line.startsWith("'")) {
                 line = line.substring(1)
